@@ -1,0 +1,6 @@
+vendor/*.tar
+vendor/*.partial
+instances/*/
+!instances/.gitkeep
+.DS_Store
+

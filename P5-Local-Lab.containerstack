@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "id": "p5-local-lab",
+  "name": "Archiware P5 Local Lab",
+  "summary": "One isolated Archiware P5 8.0.6 test server using the locally built AMD64 image.",
+  "systemImage": "externaldrive.badge.plus",
+  "fields": [
+    {
+      "key": "name",
+      "label": "Instance name",
+      "default": "p5-lab-01"
+    },
+    {
+      "key": "port",
+      "label": "P5 web/API port",
+      "default": "20000",
+      "kind": "port"
+    },
+    {
+      "key": "labRoot",
+      "label": "Dedicated lab data folder",
+      "default": "",
+      "kind": "directory"
+    }
+  ],
+  "services": [
+    {
+      "key": "p5",
+      "displayName": "Archiware P5",
+      "image": "p5-lab:8.0.6",
+      "platform": "linux/amd64",
+      "cpus": 4,
+      "memory": "4g",
+      "volumes": [
+        "${labRoot}:/host_dir"
+      ],
+      "publishPorts": [
+        "127.0.0.1:${port}:8000"
+      ]
+    }
+  ],
+  "web": {
+    "serviceKey": "p5",
+    "portField": "port"
+  }
+}
+
