@@ -1,6 +1,7 @@
 # Docker Alternative for P5 Local Lab
 
-**Status:** Experimental and untested by this project
+**Status:** Accepted on native Intel x86-64 Linux; Docker Desktop on Apple
+silicon remains experimental and untested
 
 ## Purpose and capability boundary
 
@@ -8,14 +9,17 @@ This is an alternative to the accepted Apple `container` workflow in the main
 [README](../README.md). It describes two different Docker situations:
 
 1. **Intel x86-64 Linux:** Archiware's documented target for the P5 Docker
-   package. Follow the vendor package and support guidance first.
+   package. The bounded workflow below passed on Ubuntu 24.04 LTS with Docker
+   Engine 29.9.2, Compose v2, and P5 8.0.6.
 2. **Docker Desktop on an Apple-silicon Mac:** A plausible development path
    using `linux/amd64` emulation. The files and commands below are supplied for
    testing, but this project has not run or accepted them.
 
-Do not treat this guide as proof of P5 correctness, performance, licensing
-identity stability, or tape-device support under Docker Desktop. Do not use it
-for production data.
+The native-Linux result proves only the checks in the dated
+[acceptance record](DOCKER_LINUX_ACCEPTANCE_2026-11-05.md). Do not treat it as
+proof of production correctness, performance, licence-identity stability,
+multi-hour operation, or tape-device support. Do not use this workflow for
+production data.
 
 ## Roles and evidence
 
@@ -46,6 +50,11 @@ The Docker workflow remains pinned to P5 8.0.6 until a newer vendor package is
 tested and the digest, image references, documentation, and acceptance evidence
 are updated together.
 
+The native-Linux workflow passed on Ubuntu 24.04 LTS with Docker Engine 29.9.2,
+Compose v2, and containerd v2.4.2. See the
+[dated acceptance record](DOCKER_LINUX_ACCEPTANCE_2026-11-05.md) for the exact
+scope and remaining exclusions.
+
 The P5 8.0.6 vendor launcher observed during this project:
 
 - Imports Archiware's root filesystem tar into Docker.
@@ -61,6 +70,17 @@ the intended storage workflow permit it.
 Physical tape and changer testing belongs on a suitable x86-64 Linux host with
 carefully reviewed device mappings. It is outside the Docker Desktop procedure
 below.
+
+Verify a native Linux host before continuing:
+
+```sh
+uname -m
+docker version
+docker compose version
+```
+
+Hold unless `uname -m` prints `x86_64`. Then continue with the shared workflow
+at **Download and verify P5** below.
 
 ## Option B: Docker Desktop on Apple silicon
 
@@ -84,6 +104,11 @@ docker run --rm --platform linux/amd64 ubuntu:24.04 uname -m
 
 Hold here unless the last command prints `x86_64`.
 
+## Shared Docker workflow
+
+The following steps passed on the accepted native-Linux environment. They are
+still proposed rather than accepted for Docker Desktop on Apple silicon.
+
 ### 2. Download and verify P5
 
 From the P5 Local Lab project directory:
@@ -92,9 +117,11 @@ From the P5 Local Lab project directory:
 ./scripts/download-vendor-image.sh
 ```
 
-This macOS-compatible helper downloads P5 directly from Archiware over HTTPS
-and verifies the pinned size and digest. It does not require Apple's
-`container` CLI.
+This macOS- and GNU/Linux-compatible helper downloads P5 directly from
+Archiware's pinned S3 source over HTTPS and verifies the pinned size and digest.
+It does not require Apple's `container` CLI. The human-facing download link
+printed by `check-current-p5-download.sh` may reject a plain `curl` client; the
+pinned root-filesystem URL used by this helper passed on native Linux.
 
 ### 3. Import the P5 filesystem into Docker
 
@@ -148,6 +175,9 @@ Expected evidence is `x86_64`, P5 version `8.0.6`, and a successful HTTP
 response. A passing result should still be recorded as Docker-specific test
 evidence; it does not inherit the Apple-runtime acceptance result.
 
+Allow approximately 15-20 seconds after container creation for P5 to finish
+starting before treating an HTTP or CLI failure as significant.
+
 Open <http://127.0.0.1:21000/login> or point P5 Command Lab at host
 `127.0.0.1`, REST port `21000`, and the credentials configured for this
 instance.
@@ -185,17 +215,22 @@ host-ID-bound licence is acceptable.
 Retain `docker version`, `docker compose version`, `docker inspect
 p5-docker-01`, and `docker logs p5-docker-01` output before changing the setup.
 
-## Planned acceptance work
+## Acceptance status
 
-This alternative becomes accepted only after all of the following pass on a
-recorded Docker version and host OS:
+Native Intel x86-64 Linux passed the following on the environment recorded in
+the [acceptance record](DOCKER_LINUX_ACCEPTANCE_2026-11-05.md):
 
-- [ ] AMD64 emulation returns `x86_64`.
-- [ ] P5 8.0.6 remains running for at least ten minutes.
-- [ ] Login URL and unlicensed REST requests respond.
-- [ ] `nsdchat` version and uptime queries respond.
-- [ ] Dedicated bind-mounted fixtures are readable and writable.
-- [ ] P5 configuration survives Compose stop/start.
-- [ ] Compose down/up produces the documented fresh-server behavior.
-- [ ] Two instances operate concurrently on distinct ports.
-- [ ] Documentation is updated with exact accepted versions and limitations.
+- [x] Native execution returns `x86_64`.
+- [x] P5 8.0.6 remains running for at least ten minutes.
+- [x] Login URL and bounded unlicensed REST requests respond.
+- [x] `nsdchat` version and uptime queries respond.
+- [x] Dedicated bind-mounted fixtures are readable and writable.
+- [x] P5 configuration survives Compose stop/start.
+- [x] Compose down/up produces the documented fresh-server behavior.
+- [x] Two instances operate concurrently on distinct ports.
+- [x] Documentation records exact accepted versions and limitations.
+
+Docker Desktop on Apple silicon remains unaccepted until these checks are
+repeated under its AMD64 emulation. Licence identity stability, multi-hour
+operation, archive/restore workflows, and tape or changer access remain outside
+the accepted scope on both Docker paths.

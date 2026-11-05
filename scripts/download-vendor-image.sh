@@ -31,8 +31,17 @@ else
     mv "$PARTIAL" "$DESTINATION"
 fi
 
-ACTUAL_SIZE=$(stat -f '%z' "$DESTINATION")
-ACTUAL_MD5=$(md5 -q "$DESTINATION")
+if stat -f '%z' "$DESTINATION" >/dev/null 2>&1; then
+    ACTUAL_SIZE=$(stat -f '%z' "$DESTINATION")
+else
+    ACTUAL_SIZE=$(stat -c '%s' "$DESTINATION")
+fi
+
+if command -v md5 >/dev/null 2>&1; then
+    ACTUAL_MD5=$(md5 -q "$DESTINATION")
+else
+    ACTUAL_MD5=$(md5sum "$DESTINATION" | awk '{ print $1 }')
+fi
 
 if [ "$ACTUAL_SIZE" != "$EXPECTED_SIZE" ]; then
     echo "Unexpected file size: $ACTUAL_SIZE bytes; expected $EXPECTED_SIZE." >&2
@@ -44,5 +53,9 @@ if [ "$ACTUAL_MD5" != "$EXPECTED_MD5" ]; then
 fi
 
 echo "Vendor image verified: $ACTUAL_SIZE bytes, MD5 $ACTUAL_MD5"
-shasum -a 256 "$DESTINATION"
+if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$DESTINATION"
+else
+    sha256sum "$DESTINATION"
+fi
 

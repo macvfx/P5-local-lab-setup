@@ -22,6 +22,12 @@ That milestone passed on 2026-11-05. See
 [`Docs/ACCEPTANCE_2026-11-05.md`](Docs/ACCEPTANCE_2026-11-05.md) for the exact
 environment and results.
 
+The native Intel x86-64 Linux Docker workflow also passed bounded acceptance
+on Ubuntu 24.04 LTS with Docker Engine 29.9.2 and P5 8.0.6. See the
+[Docker guide](Docs/DOCKER_ALTERNATIVE.md) and
+[dated Linux acceptance record](Docs/DOCKER_LINUX_ACCEPTANCE_2026-11-05.md).
+Docker Desktop on Apple silicon remains experimental and untested.
+
 ## Safety boundaries
 
 - The P5 port binds to `127.0.0.1`, not every network interface.
@@ -74,9 +80,9 @@ container run --rm alpine echo hello
 
 The client and server versions in `container system status` must match.
 
-Prefer Docker instead? See the explicitly untested
-[Docker alternative](Docs/DOCKER_ALTERNATIVE.md). Archiware supports its
-Docker package on Intel x86-64 Linux; the Docker Desktop/Apple-silicon path is
+Prefer Docker instead? See the [Docker alternative](Docs/DOCKER_ALTERNATIVE.md).
+The native Intel x86-64 Linux path is accepted for bounded testing on the
+recorded Ubuntu and Docker versions. The Docker Desktop/Apple-silicon path is
 included as an experimental community test route, not as an accepted result of
 this project.
 
@@ -105,7 +111,7 @@ If the unpacked folder has a version suffix, change into that directory before
 running the scripts, for example:
 
 ```sh
-cd P5-Local-Lab-0.1.1
+cd P5-Local-Lab-0.1.3
 ```
 
 ### 4. Check the host and build the P5 image
