@@ -1,0 +1,16 @@
+name: ${P5_DOCKER_NAME:-p5-docker-01}
+
+services:
+  p5:
+    image: p5-lab:8.0.6
+    platform: linux/amd64
+    container_name: ${P5_DOCKER_NAME:-p5-docker-01}
+    command: ["/usr/local/aw/start.sh"]
+    ports:
+      - "127.0.0.1:${P5_DOCKER_PORT:-21000}:8000"
+    volumes:
+      - "${P5_DOCKER_DATA:-../instances/p5-docker-01}:/host_dir"
+    labels:
+      com.matx.p5-local-lab.managed: "true"
+      com.matx.p5-local-lab.runtime: "docker-experimental"
+    stop_grace_period: 30s

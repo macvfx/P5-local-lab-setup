@@ -1,11 +1,16 @@
 #!/bin/sh
 
 set -eu
-# shellcheck source=common.sh
-. "$(dirname -- "$0")/common.sh"
+
+P5_LAB_ROOT=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 
 INSTANCE_NAME=${1:-p5-lab-01}
-validate_instance_name "$INSTANCE_NAME"
+case "$INSTANCE_NAME" in
+    ""|*[!a-z0-9-]*)
+        echo "Instance names may contain lowercase letters, numbers, and hyphens only." >&2
+        exit 2
+        ;;
+esac
 
 INSTANCE_ROOT="$P5_LAB_ROOT/instances/$INSTANCE_NAME"
 mkdir -p \

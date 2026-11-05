@@ -74,6 +74,12 @@ container run --rm alpine echo hello
 
 The client and server versions in `container system status` must match.
 
+Prefer Docker instead? See the explicitly untested
+[Docker alternative](Docs/DOCKER_ALTERNATIVE.md). Archiware supports its
+Docker package on Intel x86-64 Linux; the Docker Desktop/Apple-silicon path is
+included as an experimental community test route, not as an accepted result of
+this project.
+
 ### 2. Optionally install ContainerManager
 
 Download the latest build from

@@ -1,8 +1,8 @@
 #!/bin/sh
 
 set -eu
-# shellcheck source=common.sh
-. "$(dirname -- "$0")/common.sh"
+
+P5_LAB_ROOT=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 
 VENDOR_DIR="$P5_LAB_ROOT/vendor"
 DESTINATION="$VENDOR_DIR/awpst806-container.tar"
