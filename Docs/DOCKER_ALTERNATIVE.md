@@ -35,6 +35,17 @@ supported download target. Obtain the current **New Install** package from the
 [official P5 download page](https://www.archiware.com/download-p5/) and follow
 the included version-specific instructions.
 
+From this repository, print Archiware's current Linux Docker link and compare
+it with the tested pin before downloading anything:
+
+```sh
+./scripts/check-current-p5-download.sh
+```
+
+The Docker workflow remains pinned to P5 8.0.6 until a newer vendor package is
+tested and the digest, image references, documentation, and acceptance evidence
+are updated together.
+
 The P5 8.0.6 vendor launcher observed during this project:
 
 - Imports Archiware's root filesystem tar into Docker.

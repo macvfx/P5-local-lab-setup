@@ -114,13 +114,17 @@ Run:
 
 ```sh
 ./scripts/preflight.sh
+./scripts/check-current-p5-download.sh
 ./scripts/download-vendor-image.sh
 ./scripts/build-image.sh
 ```
 
-The first download is approximately 346 MiB. The build creates the local
-`p5-lab:8.0.6` AMD64 image. It does not start P5 or activate a licence. The
-same image can be reused by multiple independent test instances.
+The check prints Archiware's official download page, its current Linux Docker
+package, and the 8.0.6 release tested by this project. It does not download or
+change anything. The first vendor-image download is approximately 346 MiB.
+The build creates the local `p5-lab:8.0.6` AMD64 image. It does not start P5 or
+activate a licence. The same image can be reused by multiple independent test
+instances.
 
 ### 5. Create the first instance
 
@@ -186,6 +190,7 @@ Run each step from this directory:
 
 ```sh
 ./scripts/preflight.sh
+./scripts/check-current-p5-download.sh
 ./scripts/download-vendor-image.sh
 ./scripts/build-image.sh
 ./scripts/create-instance.sh p5-lab-01 20000
@@ -278,8 +283,20 @@ or another explicitly limited backing store when a test needs deterministic
 
 ## Vendor source
 
-The pinned source is Archiware P5 8.0.6:
+Start at Archiware's canonical
+[P5 download page](https://www.archiware.com/download-p5/) and locate
+**Synology 7+ or Linux Docker > New Install**. The helper below prints the
+current link advertised by that page without downloading it:
 
+```sh
+./scripts/check-current-p5-download.sh
+```
+
+This project deliberately does not follow the newest P5 release automatically.
+Its accepted and reproducible pin remains Archiware P5 8.0.6:
+
+- Vendor package link used for discovery:
+  `https://www.archiware.com/?awdl=Linux_Docker_awspst806.zip&awpf=synology`
 - Root filesystem: `https://p5-downloads.s3.amazonaws.com/awpst806-container.tar`
 - Expected size: `362757632` bytes
 - Expected MD5/S3 ETag: `04255bb0decabeb9571b6f8a96911da8`
@@ -288,6 +305,13 @@ The pinned source is Archiware P5 8.0.6:
 The download script uses HTTPS and refuses an unexpected size or digest. These
 values identify the file observed on 2026-11-05; they are not a substitute for
 a vendor-published cryptographic checksum.
+
+When Archiware publishes a newer P5 version, treat it as a new lab target. Test
+the vendor package first, then update the source URL, expected size and digest,
+image tag, Dockerfile label, Compose/ContainerManager references, documentation,
+and dated acceptance record together. Keeping the old pin available is useful
+when P5 Command Lab or another client needs regression testing against more
+than one server version.
 
 ## Sharing the lab project
 
@@ -300,4 +324,10 @@ After committing changes, create a clean distributable archive with:
 The resulting ZIP and SHA-256 checksum are written under `dist/`. Each tester
 downloads P5 from Archiware using the included script, so the project archive
 never redistributes vendor software or a configured/licensed server.
+
+## License
+
+P5 Local Lab is available under the [MIT License](LICENSE), matching P5 Command
+Lab. Archiware P5 itself remains proprietary vendor software and is not covered
+by this repository's MIT license.
 
