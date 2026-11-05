@@ -10,11 +10,7 @@ validate_instance_name "$INSTANCE_NAME"
 validate_port "$HOST_PORT"
 
 INSTANCE_ROOT="$P5_LAB_ROOT/instances/$INSTANCE_NAME"
-mkdir -p \
-    "$INSTANCE_ROOT/source" \
-    "$INSTANCE_ROOT/archive" \
-    "$INSTANCE_ROOT/restore" \
-    "$INSTANCE_ROOT/exports"
+"$P5_LAB_ROOT/scripts/prepare-instance-folder.sh" "$INSTANCE_NAME" >/dev/null
 
 if "$CONTAINER_BIN" inspect "$INSTANCE_NAME" >/dev/null 2>&1; then
     echo "Container $INSTANCE_NAME already exists; refusing to replace it." >&2

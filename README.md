@@ -5,6 +5,12 @@ silicon Macs. It converts Archiware's official Linux Docker root filesystem
 into a local OCI image and runs the Intel/AMD64 P5 build with Apple's Rosetta
 container support.
 
+**This is currently a reproducible automation project, not a standalone macOS
+app.** Its shell scripts install no system software: they verify Apple's
+container runtime, download and verify P5 directly from Archiware, build one
+local image, and create isolated test instances. ContainerManager is the
+recommended optional graphical interface.
+
 The first milestone is deliberately narrow: prove that one P5 8.0.6 server can
 start, expose its web and REST interface on localhost, see a dedicated fixture
 folder, and survive a normal stop/start cycle. An unlicensed server can answer
@@ -26,9 +32,134 @@ environment and results.
 - Deleting a container deletes P5 configuration stored in its writable layer;
   the bind-mounted fixture folders remain on the Mac.
 
-## Requirements
+## From a new Mac to a P5 lab
 
-- Apple silicon Mac running macOS 26 or later.
+### 1. Install Apple's container runtime
+
+Choose **one** installation method. Do not install both the signed Apple
+package and the Homebrew formula; two copies can leave the CLI and background
+service on different versions.
+
+#### Option A: Apple's signed installer (recommended)
+
+1. Confirm the Mac has Apple silicon and macOS 26 or 27.
+2. Download the latest signed installer from
+   [apple/container releases](https://github.com/apple/container/releases).
+3. Run the package installer. It installs under `/usr/local` and asks for an
+   administrator password.
+4. Start the service:
+
+   ```sh
+   container system start
+   ```
+
+#### Option B: Homebrew
+
+```sh
+brew install container
+brew services start container
+container system kernel set --recommended
+```
+
+The kernel command is required because the Homebrew service does not install a
+kernel automatically.
+
+Verify either installation before continuing:
+
+```sh
+container --version
+container system status
+container run --rm alpine echo hello
+```
+
+The client and server versions in `container system status` must match.
+
+### 2. Optionally install ContainerManager
+
+Download the latest build from
+[bartreardon/ContainerManager-App](https://github.com/bartreardon/ContainerManager-App/releases/latest),
+move it to Applications, and launch it after Apple's container service is
+running. ContainerManager 1.1.2 accepted this project's stack template during
+validation. The project can also be used entirely from Terminal.
+
+### 3. Obtain this project
+
+Clone the repository when it has been published, or unpack a project archive
+created with `scripts/package-project.sh`. The archive intentionally excludes
+the proprietary P5 download, instance data, host IDs, licences, and
+credentials.
+
+Open Terminal and change into the unpacked project directory:
+
+```sh
+cd P5-Local-Lab
+```
+
+### 4. Check the host and build the P5 image
+
+Run:
+
+```sh
+./scripts/preflight.sh
+./scripts/download-vendor-image.sh
+./scripts/build-image.sh
+```
+
+The first download is approximately 346 MiB. The build creates the local
+`p5-lab:8.0.6` AMD64 image. It does not start P5 or activate a licence. The
+same image can be reused by multiple independent test instances.
+
+### 5. Create the first instance
+
+Choose either the CLI workflow or ContainerManager.
+
+#### CLI workflow
+
+```sh
+./scripts/create-instance.sh p5-lab-01 20000
+./scripts/smoke-test.sh p5-lab-01 20000
+./scripts/status.sh p5-lab-01
+```
+
+#### ContainerManager workflow
+
+1. Prepare the dedicated folder:
+
+   ```sh
+   ./scripts/prepare-instance-folder.sh p5-lab-01
+   ```
+
+2. Open **Stacks**.
+3. Choose **New Stack > Import Template** and select
+   `P5-Local-Lab.containerstack`.
+4. Enter a unique instance name and localhost port.
+5. Choose the prepared `instances/p5-lab-01` folder for `/host_dir`.
+6. Create the stack and use **Open in Browser** when P5 is ready.
+
+Do not create a ContainerManager stack with the same name or port as an
+instance already created by the CLI.
+
+### 6. Connect and test
+
+Open <http://127.0.0.1:20000/login>. An unlicensed server can already answer
+read-only REST and CLI requests.
+
+For P5 Command Lab, create a live server profile using:
+
+- Scheme: `http`
+- Host: `127.0.0.1`
+- REST port: `20000`
+- Username and password: the credentials configured in this P5 instance
+
+Start with server version and uptime, followed by Archive-index discovery. A
+trial is optional until the test requires index creation, plans, archiving, or
+restores.
+
+## Requirements summary
+
+- Apple silicon Mac running macOS 26 or 27. Apple's runtime requires macOS 26;
+  this Intel Linux P5 image was also proven under Rosetta on macOS 27.2. Later
+  macOS releases remain unverified for this project.
 - Apple `container` CLI and services.
 - Rosetta support for `linux/amd64` containers.
 - ContainerManager is optional but supported through
@@ -36,7 +167,7 @@ environment and results.
 - Review Archiware's software licence and trial terms. Trial activation remains
   a manual, optional action inside P5.
 
-## Quick start
+## Condensed quick start
 
 Run each step from this directory:
 
@@ -82,6 +213,25 @@ Stop and restart the instance without deleting its writable filesystem:
 ./scripts/start-instance.sh p5-lab-01
 ```
 
+Create another isolated instance by choosing another name and port. It reuses
+the existing image but receives an independent writable container filesystem:
+
+```sh
+./scripts/create-instance.sh p5-lab-02 20001
+./scripts/smoke-test.sh p5-lab-02 20001
+```
+
+Reset an instance to a fresh P5 server:
+
+```sh
+./scripts/destroy-instance.sh p5-lab-02 --confirm
+./scripts/create-instance.sh p5-lab-02 20001
+```
+
+The destroy command refuses containers that are not labelled as P5 Local Lab
+resources. It removes the container and its P5 configuration but deliberately
+keeps the instance's bind-mounted source, archive, restore, and export folders.
+
 ## ContainerManager
 
 Build the image first with `scripts/build-image.sh`. In ContainerManager choose
@@ -125,4 +275,16 @@ The pinned source is Archiware P5 8.0.6:
 The download script uses HTTPS and refuses an unexpected size or digest. These
 values identify the file observed on 2026-11-05; they are not a substitute for
 a vendor-published cryptographic checksum.
+
+## Sharing the lab project
+
+After committing changes, create a clean distributable archive with:
+
+```sh
+./scripts/package-project.sh
+```
+
+The resulting ZIP and SHA-256 checksum are written under `dist/`. Each tester
+downloads P5 from Archiware using the included script, so the project archive
+never redistributes vendor software or a configured/licensed server.
 

@@ -2,5 +2,6 @@ vendor/*.tar
 vendor/*.partial
 instances/*/
 !instances/.gitkeep
+dist/
 .DS_Store
 
