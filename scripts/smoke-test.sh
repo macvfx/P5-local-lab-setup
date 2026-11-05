@@ -31,7 +31,8 @@ while [ "$ATTEMPT" -lt 60 ]; do
         --output /dev/null \
         "http://127.0.0.1:$HOST_PORT/login"; then
         echo "P5 responded at http://127.0.0.1:$HOST_PORT/login"
-        echo "Smoke test passed. Trial activation and P5 configuration remain manual."
+        echo "Smoke test passed. Unlicensed read-only REST and CLI testing is available."
+        echo "Trial activation for configured Archive workflows remains optional and manual."
         exit 0
     fi
     ATTEMPT=$((ATTEMPT + 1))

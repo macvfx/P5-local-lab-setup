@@ -7,8 +7,10 @@ container support.
 
 The first milestone is deliberately narrow: prove that one P5 8.0.6 server can
 start, expose its web and REST interface on localhost, see a dedicated fixture
-folder, and survive a normal stop/start cycle. It does not configure a trial
-license, create P5 plans, or expose physical tape devices.
+folder, and survive a normal stop/start cycle. An unlicensed server can answer
+useful read-only REST and CLI requests such as server version, uptime, and
+Archive-index discovery. A trial is needed for configured Archive workflows
+and file movement, not for this initial integration testing.
 
 That milestone passed on 2026-11-05. See
 [`Docs/ACCEPTANCE_2026-11-05.md`](Docs/ACCEPTANCE_2026-11-05.md) for the exact
@@ -31,8 +33,8 @@ environment and results.
 - Rosetta support for `linux/amd64` containers.
 - ContainerManager is optional but supported through
   `P5-Local-Lab.containerstack`.
-- Review and accept Archiware's software licence before using P5. Trial
-  activation remains a manual action inside P5.
+- Review Archiware's software licence and trial terms. Trial activation remains
+  a manual, optional action inside P5.
 
 ## Quick start
 
@@ -47,9 +49,31 @@ Run each step from this directory:
 ./scripts/status.sh p5-lab-01
 ```
 
-Then open <http://127.0.0.1:20000/login> and complete the vendor's first-run
-steps. Do not clone or commit an activated P5 installation: Archiware licensing
-uses a host identity.
+Then open <http://127.0.0.1:20000/login>. The unlicensed server is sufficient
+for initial P5 Command Lab REST and CLI tests. Do not clone or commit an
+activated P5 installation: Archiware licensing uses a host identity.
+
+## Unlicensed and trial testing
+
+Without a P5 licence, the lab can still exercise read-only integration paths,
+including:
+
+- Server version and uptime.
+- Basic server and service information.
+- Archive-index and other collection discovery where supported by P5.
+- `nsdchat` connectivity and command construction.
+- REST authentication, response decoding, error handling, and presentation.
+
+To test index creation, Archive plans, storage pools, archiving files, or
+restores, request a trial in the P5 web interface under **Home > License
+Manager > Get Trial License**. P5 offers a fully functional trial lasting 5 or
+30 days and forwards the operator to the Archiware Portal with the instance's
+host ID.
+
+The trial is connected to that host ID. Treat an activated container as a
+stateful test server: stop/start it normally, and do not assume its licence will
+remain valid after deleting and recreating the container. Never put a host ID,
+licence file, portal response, or credentials into this repository.
 
 Stop and restart the instance without deleting its writable filesystem:
 

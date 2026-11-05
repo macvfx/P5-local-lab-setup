@@ -21,6 +21,8 @@
 - Host mount: only `instances/p5-lab-01` at `/host_dir`.
 - Platform: `linux/amd64` with Rosetta enabled.
 - No tape devices, Mac root mount, trial activation, or P5 login was used.
+  A licence is not required for the read-only REST and CLI checks targeted by
+  this first milestone.
 
 ## Results
 
@@ -55,8 +57,10 @@ disk-full tests.
 ## Not yet accepted
 
 - Manual P5 sign-in and password change.
-- Trial licence request or activation.
-- REST authentication from P5 Command Lab.
+- REST authentication and unlicensed read-only recipes from P5 Command Lab.
+- Optional 5- or 30-day trial request through **Home > License Manager > Get
+  Trial License**. The trial is fully functional and bound to the container's
+  displayed host ID.
 - Creation of Archive indexes, plans, pools, or disk volumes.
 - Archive and restore of fixture data.
 - Two simultaneous P5 instances.
