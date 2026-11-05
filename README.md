@@ -90,15 +90,22 @@ validation. The project can also be used entirely from Terminal.
 
 ### 3. Obtain this project
 
-Clone the repository when it has been published, or unpack a project archive
-created with `scripts/package-project.sh`. The archive intentionally excludes
-the proprietary P5 download, instance data, host IDs, licences, and
-credentials.
-
-Open Terminal and change into the unpacked project directory:
+Clone the public repository:
 
 ```sh
-cd P5-Local-Lab
+git clone https://github.com/macvfx/P5-local-lab-setup.git
+cd P5-local-lab-setup
+```
+
+Alternatively, unpack a project archive created with
+`scripts/package-project.sh`. The archive intentionally excludes the
+proprietary P5 download, instance data, host IDs, licences, and credentials.
+
+If the unpacked folder has a version suffix, change into that directory before
+running the scripts, for example:
+
+```sh
+cd P5-Local-Lab-0.1.1
 ```
 
 ### 4. Check the host and build the P5 image
