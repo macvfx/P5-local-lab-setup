@@ -11,9 +11,15 @@
       "default": "p5-lab-01"
     },
     {
-      "key": "port",
+      "key": "restPort",
       "label": "P5 web/API port",
       "default": "20000",
+      "kind": "port"
+    },
+    {
+      "key": "cliPort",
+      "label": "P5 CLI/awsock port",
+      "default": "29001",
       "kind": "port"
     },
     {
@@ -35,13 +41,14 @@
         "${labRoot}:/host_dir"
       ],
       "publishPorts": [
-        "127.0.0.1:${port}:8000"
+        "127.0.0.1:${restPort}:8000",
+        "127.0.0.1:${cliPort}:9001"
       ]
     }
   ],
   "web": {
     "serviceKey": "p5",
-    "portField": "port"
+    "portField": "restPort"
   }
 }
 

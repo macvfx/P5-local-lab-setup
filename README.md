@@ -12,15 +12,24 @@ local image, and create isolated test instances. ContainerManager is the
 recommended optional graphical interface.
 
 The first milestone is deliberately narrow: prove that one P5 8.0.6 server can
-start, expose its web and REST interface on localhost, see a dedicated fixture
-folder, and survive a normal stop/start cycle. An unlicensed server can answer
-useful read-only REST and CLI requests such as server version, uptime, and
-Archive-index discovery. A trial is needed for configured Archive workflows
-and file movement, not for this initial integration testing.
+start, expose its web, REST, and CLI/awsock interfaces on localhost, see a
+dedicated fixture folder, and survive a normal stop/start cycle. An unlicensed
+server can answer useful read-only REST and CLI requests such as server
+version, uptime, and Archive-index discovery. A trial is needed for configured
+Archive workflows and file movement, not for this initial integration testing.
 
 That milestone passed on 2026-11-05. See
 [`Docs/ACCEPTANCE_2026-11-05.md`](Docs/ACCEPTANCE_2026-11-05.md) for the exact
 environment and results.
+
+The localhost CLI/awsock mapping was added and smoke-tested on 2026-11-06. See
+[`Docs/CLI_PORT_ACCEPTANCE_2026-11-06.md`](Docs/CLI_PORT_ACCEPTANCE_2026-11-06.md)
+for the exact REST/CLI mappings, evidence, and remaining authenticated test.
+
+Research and a staged roadmap for disposable macOS P5 test VMs, trial
+licensing, fictional Archive setup, and future REST automation are in
+[`Docs/MACOS_VM_P5_TEST_LAB_RESEARCH.md`](Docs/MACOS_VM_P5_TEST_LAB_RESEARCH.md).
+That work is proposed, not yet implemented or accepted.
 
 The native Intel x86-64 Linux Docker workflow also passed bounded acceptance
 on Ubuntu 24.04 LTS with Docker Engine 29.9.2 and P5 8.0.6. See the
@@ -30,7 +39,7 @@ Docker Desktop on Apple silicon remains experimental and untested.
 
 ## Safety boundaries
 
-- The P5 port binds to `127.0.0.1`, not every network interface.
+- The P5 REST and CLI ports bind to `127.0.0.1`, not every network interface.
 - Only an instance-specific directory is mounted at `/host_dir`.
 - The Mac's root filesystem is never mounted into P5.
 - Vendor binaries are downloaded from Archiware and are not committed here.
@@ -111,7 +120,7 @@ If the unpacked folder has a version suffix, change into that directory before
 running the scripts, for example:
 
 ```sh
-cd P5-Local-Lab-0.1.3
+cd P5-Local-Lab-0.1.4
 ```
 
 ### 4. Check the host and build the P5 image
@@ -139,8 +148,8 @@ Choose either the CLI workflow or ContainerManager.
 #### CLI workflow
 
 ```sh
-./scripts/create-instance.sh p5-lab-01 20000
-./scripts/smoke-test.sh p5-lab-01 20000
+./scripts/create-instance.sh p5-lab-01 20000 29001
+./scripts/smoke-test.sh p5-lab-01 20000 29001
 ./scripts/status.sh p5-lab-01
 ```
 
@@ -155,11 +164,11 @@ Choose either the CLI workflow or ContainerManager.
 2. Open **Stacks**.
 3. Choose **New Stack > Import Template** and select
    `P5-Local-Lab.containerstack`.
-4. Enter a unique instance name and localhost port.
+4. Enter a unique instance name plus unique localhost REST and CLI ports.
 5. Choose the prepared `instances/p5-lab-01` folder for `/host_dir`.
 6. Create the stack and use **Open in Browser** when P5 is ready.
 
-Do not create a ContainerManager stack with the same name or port as an
+Do not create a ContainerManager stack with the same name or either port as an
 instance already created by the CLI.
 
 ### 6. Connect and test
@@ -172,7 +181,14 @@ For P5 Command Lab, create a live server profile using:
 - Scheme: `http`
 - Host: `127.0.0.1`
 - REST port: `20000`
+- nsdchat port: `29001`
 - Username and password: the credentials configured in this P5 instance
+- CLI connection: **Remote over awsock**
+
+The lab uses Remote over awsock even though its address is localhost: P5 runs
+inside the container, not in the Mac's local P5 service. Host port `29001`
+maps to P5's container port `9001` and avoids a possible conflict with a local
+P5 installation already listening on host port `9001`.
 
 Start with server version and uptime, followed by Archive-index discovery. A
 trial is optional until the test requires index creation, plans, archiving, or
@@ -181,8 +197,8 @@ restores.
 ## Requirements summary
 
 - Apple silicon Mac running macOS 26 or 27. Apple's runtime requires macOS 26;
-  this Intel Linux P5 image was also proven under Rosetta on macOS 27.2. Later
-  macOS releases remain unverified for this project.
+  this Intel Linux P5 image was also proven under Rosetta on a compatible test
+  host. Later macOS releases remain unverified for this project.
 - Apple `container` CLI and services.
 - Rosetta support for `linux/amd64` containers.
 - ContainerManager is optional but supported through
@@ -199,8 +215,8 @@ Run each step from this directory:
 ./scripts/check-current-p5-download.sh
 ./scripts/download-vendor-image.sh
 ./scripts/build-image.sh
-./scripts/create-instance.sh p5-lab-01 20000
-./scripts/smoke-test.sh p5-lab-01 20000
+./scripts/create-instance.sh p5-lab-01 20000 29001
+./scripts/smoke-test.sh p5-lab-01 20000 29001
 ./scripts/status.sh p5-lab-01
 ```
 
@@ -237,19 +253,20 @@ Stop and restart the instance without deleting its writable filesystem:
 ./scripts/start-instance.sh p5-lab-01
 ```
 
-Create another isolated instance by choosing another name and port. It reuses
-the existing image but receives an independent writable container filesystem:
+Create another isolated instance by choosing another name and two unused
+ports. It reuses the existing image but receives an independent writable
+container filesystem:
 
 ```sh
-./scripts/create-instance.sh p5-lab-02 20001
-./scripts/smoke-test.sh p5-lab-02 20001
+./scripts/create-instance.sh p5-lab-02 20001 29002
+./scripts/smoke-test.sh p5-lab-02 20001 29002
 ```
 
 Reset an instance to a fresh P5 server:
 
 ```sh
 ./scripts/destroy-instance.sh p5-lab-02 --confirm
-./scripts/create-instance.sh p5-lab-02 20001
+./scripts/create-instance.sh p5-lab-02 20001 29002
 ```
 
 The destroy command refuses containers that are not labelled as P5 Local Lab

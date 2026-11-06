@@ -2,7 +2,8 @@
 
 ## Environment
 
-- Host: Apple silicon, macOS 27.2 (build 26B123), 8 logical CPUs.
+- Host: Apple silicon test Mac. Exact private host inventory is intentionally
+  omitted; the runtime and guest architecture evidence below is preserved.
 - Apple `container`: client and server 1.6.1, commit
   `aa8d76b44a834eee3ebf6a0bc577e376f65f6361`.
 - ContainerManager: 1.1.2 (build 4).

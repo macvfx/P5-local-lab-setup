@@ -28,9 +28,9 @@ production data.
 | Runtime | Operator/Docker | Docker Engine or Docker Desktop | `docker version` succeeds |
 | AMD64 gate | Docker Desktop | Small `linux/amd64` image | `uname -m` returns `x86_64` |
 | P5 image | `docker import` | Verified Archiware P5 8.0.6 tar | Local `p5-lab:8.0.6` image |
-| Instance | Docker Compose | Dedicated fixture folder and port | Container remains running |
-| Service | P5 | Localhost port mapping | Login URL responds |
-| CLI | `nsdchat` inside P5 | Read-only version query | P5 returns `8.0.6` |
+| Instance | Docker Compose | Dedicated fixture folder and REST/CLI ports | Container remains running |
+| Service | P5 | Localhost port mappings | Login URL and CLI TCP port respond |
+| CLI | `nsdchat` inside P5 plus host port probe | Read-only version query | P5 returns `8.0.6`; mapped port accepts TCP |
 
 ## Option A: Intel x86-64 Linux Docker
 
@@ -141,10 +141,12 @@ command is supplied by Compose in the next step.
 ./scripts/prepare-instance-folder.sh p5-docker-01
 export P5_DOCKER_NAME=p5-docker-01
 export P5_DOCKER_PORT=21000
+export P5_DOCKER_CLI_PORT=29011
 export P5_DOCKER_DATA="$PWD/instances/p5-docker-01"
 ```
 
-Use a different port from an Apple-runtime instance already using `20000`.
+Use REST and CLI ports that differ from any Apple-runtime instance already
+using `20000` and `29001`.
 
 ### 5. Start P5 with Compose
 
@@ -158,7 +160,8 @@ docker compose -f docker/compose.yaml ps
 The Compose definition:
 
 - Forces `linux/amd64`.
-- Binds P5 only to `127.0.0.1:21000` by default.
+- Binds P5 REST only to `127.0.0.1:21000` by default.
+- Binds P5 CLI/awsock only to `127.0.0.1:29011` by default.
 - Mounts only the chosen instance directory at `/host_dir`.
 - Does not expose the Mac root or physical devices.
 
@@ -168,19 +171,41 @@ The Compose definition:
 docker exec p5-docker-01 uname -m
 docker exec p5-docker-01 /usr/local/aw/bin/nsdchat -c srvinfo lexxvers
 curl --fail http://127.0.0.1:21000/login >/dev/null
+nc -z -w 5 127.0.0.1 29011
 docker logs --tail 100 p5-docker-01
 ```
 
-Expected evidence is `x86_64`, P5 version `8.0.6`, and a successful HTTP
-response. A passing result should still be recorded as Docker-specific test
-evidence; it does not inherit the Apple-runtime acceptance result.
+Expected evidence is `x86_64`, P5 version `8.0.6`, a successful HTTP response,
+and a successful TCP connection to the mapped CLI port. A passing result should
+still be recorded as Docker-specific test evidence; it does not inherit the
+Apple-runtime acceptance result.
 
 Allow approximately 15-20 seconds after container creation for P5 to finish
 starting before treating an HTTP or CLI failure as significant.
 
 Open <http://127.0.0.1:21000/login> or point P5 Command Lab at host
-`127.0.0.1`, REST port `21000`, and the credentials configured for this
-instance.
+`127.0.0.1`, REST port `21000`, nsdchat port `29011`, and the credentials
+configured for this instance. Select **Remote over awsock** for CLI recipes;
+the P5 server is inside Docker even though the published address is localhost.
+
+### Remote Docker or Synology host
+
+The supplied Compose file deliberately binds both ports to `127.0.0.1` for a
+lab running on the same computer as P5 Command Lab. For a separately managed
+Docker or Synology host, configure equivalent TCP mappings in that platform's
+container interface:
+
+- host REST port `20000` to container port `8000/tcp`;
+- host CLI port `29001` to container port `9001/tcp`.
+
+Bind those ports only to the intended LAN interface where the platform allows
+it, and restrict them to trusted clients with the host firewall. Do not expose
+either service to the public internet or assume that the vendor CLI socket is
+encrypted.
+
+In P5 Command Lab use the Docker or NAS hostname, REST port `20000`, nsdchat
+port `29001`, and **Remote over awsock**. A non-loopback profile automatically
+enforces Remote in P5 Command Lab 0.5.0 and later.
 
 ## Lifecycle and reset
 

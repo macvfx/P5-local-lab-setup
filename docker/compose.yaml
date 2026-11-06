@@ -8,6 +8,7 @@ services:
     command: ["/usr/local/aw/start.sh"]
     ports:
       - "127.0.0.1:${P5_DOCKER_PORT:-21000}:8000"
+      - "127.0.0.1:${P5_DOCKER_CLI_PORT:-29011}:9001"
     volumes:
       - "${P5_DOCKER_DATA:-../instances/p5-docker-01}:/host_dir"
     labels:

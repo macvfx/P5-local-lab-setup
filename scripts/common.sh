@@ -43,3 +43,12 @@ validate_port() {
     fi
 }
 
+validate_distinct_ports() {
+    validate_port "$1"
+    validate_port "$2"
+    if [ "$1" -eq "$2" ]; then
+        echo "REST and CLI host ports must be different." >&2
+        exit 2
+    fi
+}
+
