@@ -8,10 +8,11 @@ been implemented or accepted yet.
 
 ## Executive recommendation
 
-Start with a small **Tart plus Packer** pilot using one disposable macOS 15
-Sequoia ARM virtual machine. Build an unlicensed golden macOS image, clone it
-for each test, install P5 into the clone, run bounded installer and API checks,
-save sanitized receipts, and discard the clone.
+Start with a small **Tart plus Packer** pilot using one disposable Apple
+M-series macOS virtual machine within Archiware's published tested range. Build
+an unlicensed golden macOS image, clone it for each test, install P5 into the
+clone, run bounded installer and API checks, save sanitized receipts, and
+discard the clone.
 
 Use a dedicated Apple-silicon Mac as the initial macOS VM host, subject to its
 installed memory, free storage, host OS, and supported guest matrix. A separate
@@ -64,11 +65,19 @@ necessary to reproduce a fault.
 | Intel Docker host | Architecture, Docker environment, host OS, free storage | Provides native-amd64 comparison without ARM translation |
 | Future fleet host | At least 32 GB RAM and 500 GB free fast storage | Better fit for three or more concurrent macOS guests |
 
-The P5 8.0 manual lists Apple M1 support for macOS 11 through macOS 15. It does
-not list macOS 26 or 27 guests. The first guest should therefore be macOS 15,
-not a copy of the host operating system. The precise P5 release selected for
-the lab must be checked against its own current compatibility matrix before
-installation.
+### P5 macOS compatibility source
+
+At the research date, Archiware's current P5 8.0.6 download page lists:
+
+- Intel x86 (64-bit): macOS `10.9–15.x`;
+- Apple M-series: macOS `11.x–26.5.x (Tahoe)`.
+
+Treat the live download page as the current vendor-tested range; the P5 8.0
+manual and older datasheets may lag it. Separate project testing has also
+observed P5 working on macOS `27.2`. That newer result is useful compatibility
+evidence, but it is outside Archiware's published range and must not be
+described as vendor certification. Recheck the download page for each P5 and
+macOS release rather than assuming forward compatibility.
 
 ## Options considered
 
@@ -123,7 +132,7 @@ flowchart TB
     N[Native macOS P5<br/>on controller]
     A[Apple-container Linux P5<br/>on controller]
     M[Apple-silicon VM host<br/>Tart initially]
-    B[Read-only macOS 15 base]
+    B[Read-only macOS base<br/>selected from test matrix]
     V1[Disposable macOS P5 VM]
     I[Intel Docker host<br/>Docker Compose]
     D[Native-amd64 Linux P5 container]
@@ -152,7 +161,7 @@ flowchart TB
 | Physical host | Planned targets | Primary purpose | Initial automation |
 | --- | --- | --- | --- |
 | Controller Mac | Native macOS P5; Apple-container Linux P5 | Command Lab client, local/native comparison, Apple-container acceptance | Existing native P5 procedures plus this repository's Apple-container scripts |
-| Apple-silicon VM host | One or more macOS 15 ARM P5 guests | Disposable macOS installer, upgrade, licensing, and Archive tests | Tart/Packer pilot; Parallels reproduction where required |
+| Apple-silicon VM host | One or more Apple M-series macOS P5 guests | Disposable macOS installer, upgrade, licensing, and Archive tests | Tart/Packer pilot; Parallels reproduction where required |
 | Intel Docker host | Linux P5 container using Docker Compose | Native x86-64 container comparison without ARM translation | Docker Compose lifecycle, health, REST, CLI, and fixture tests |
 
 This layout separates processor architecture, guest operating system, and P5
@@ -192,7 +201,7 @@ against the controller's installed P5.
 
 The golden image should contain only:
 
-- a compatible macOS 15 installation;
+- a selected macOS installation from the documented test matrix;
 - a dedicated, fictional automation account;
 - the selected VM guest agent or SSH configuration;
 - current OS updates chosen for that test matrix;
@@ -248,7 +257,7 @@ whether it is a one-guest host or can safely run two short-lived guests.
 This document completes the initial research deliverable. Before building the
 pilot, confirm:
 
-- the exact P5 version and its macOS 15 compatibility;
+- the exact P5 version and the current vendor-tested macOS range;
 - the Apple software licence terms for the exact guest release;
 - Archiware's current demo/trial licence rules and machine-identity behaviour;
 - whether the first host will use internal storage or a fast external NVMe;
@@ -256,7 +265,8 @@ pilot, confirm:
 
 ### Phase 1: unlicensed installation automation
 
-Build the golden macOS 15 image and a disposable-clone runner. Automate only:
+Build the selected golden macOS image and a disposable-clone runner. Automate
+only:
 
 - P5 installer checksum and signature verification;
 - unattended package installation where the vendor installer supports it;
@@ -319,7 +329,7 @@ A suggested receipt shape is:
 ```json
 {
   "run_id": "example-run-001",
-  "vm_id": "p5-macos15-example-001",
+  "vm_id": "p5-macos-example-001",
   "p5_version": "<observed-version>",
   "operation": "ensure_archive_plan",
   "target": "Example-Plan",
@@ -372,9 +382,10 @@ others.
   limited additional virtual macOS instances on Apple-branded hardware. Verify
   the agreement for the exact host and guest releases before selecting a
   concurrency target.
-- **P5 support boundary:** macOS 15 is within the P5 8.0 manual's stated Apple
-  silicon range; macOS 26 and 27 are not. Confirm newer P5 documentation rather
-  than assuming forward compatibility.
+- **P5 support boundary:** the current P5 8.0.6 download page lists Apple
+  M-series macOS `11.x–26.5.x (Tahoe)`. Project testing has observed operation
+  on macOS `27.2`, but that remains outside Archiware's published tested range.
+  Keep vendor-tested and project-observed results distinct.
 - **Virtualization support:** Parallels is named by Archiware; Tart, UTM, and
   Anka are engineering platforms unless Archiware confirms otherwise.
 - **Licence identity:** snapshots and clones may preserve or duplicate identity
@@ -399,7 +410,8 @@ others.
 1. Privately inventory the proposed Apple-silicon and Intel hosts: memory,
    host OS, free space, Docker or VM-tool support, and wired networking.
 2. Provide at least 100 GiB of fast free storage for the one-VM pilot.
-3. Confirm macOS 15 and the selected P5 version as the first VM test pair.
+3. Select the first guest/P5 pair from Archiware's current published range;
+   add macOS `27.2` only as a separate project-observed compatibility lane.
 4. Build one unlicensed Tart/Packer guest and accept installer, reboot, REST,
    and CLI tests.
 5. Deploy the existing Docker Compose design on the Intel mini, adjust only
@@ -415,6 +427,7 @@ others.
 
 ## Primary references
 
+- Archiware: [Current P5 downloads and tested operating-system ranges](https://www.archiware.com/download-p5/)
 - Apple: [Installing macOS on a virtual machine](https://developer.apple.com/documentation/virtualization/installing-macos-on-a-virtual-machine)
 - Apple: [Virtualize macOS on a Mac](https://developer.apple.com/documentation/virtualization/virtualize-macos-on-a-mac)
 - Apple: [macOS Ventura software licence agreement](https://www.apple.com/legal/sla/docs/macOSVentura.pdf) (example wording only; verify the exact installed release)

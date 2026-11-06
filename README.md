@@ -120,7 +120,7 @@ If the unpacked folder has a version suffix, change into that directory before
 running the scripts, for example:
 
 ```sh
-cd P5-Local-Lab-0.1.4
+cd P5-Local-Lab-0.1.5
 ```
 
 ### 4. Check the host and build the P5 image
@@ -199,6 +199,13 @@ restores.
 - Apple silicon Mac running macOS 26 or 27. Apple's runtime requires macOS 26;
   this Intel Linux P5 image was also proven under Rosetta on a compatible test
   host. Later macOS releases remain unverified for this project.
+- Native macOS P5 compatibility is a separate question from the Linux
+  container host requirement. Archiware's current P5 8.0.6 download page lists
+  Intel macOS `10.9–15.x` and Apple M-series macOS `11.x–26.5.x (Tahoe)`.
+  Project testing has also observed native P5 working on macOS `27.2`, outside
+  that published vendor-tested range. Check the
+  [current Archiware download page](https://www.archiware.com/download-p5/)
+  before choosing a native macOS test target.
 - Apple `container` CLI and services.
 - Rosetta support for `linux/amd64` containers.
 - ContainerManager is optional but supported through
