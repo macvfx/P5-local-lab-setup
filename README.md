@@ -120,7 +120,7 @@ If the unpacked folder has a version suffix, change into that directory before
 running the scripts, for example:
 
 ```sh
-cd P5-Local-Lab-0.1.5
+cd P5-Local-Lab-0.1.6
 ```
 
 ### 4. Check the host and build the P5 image

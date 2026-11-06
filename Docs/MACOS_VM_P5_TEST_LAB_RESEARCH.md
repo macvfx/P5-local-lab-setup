@@ -21,6 +21,10 @@ Apple-container Linux P5 environment. An Intel Mac can provide a native-amd64
 Docker Compose P5 target. This creates four useful execution contexts while
 keeping hardware inventory out of shared configuration and documentation.
 
+For a current pilot, use a macOS 27-capable Apple-silicon host running macOS 27
+with separate macOS 15 and macOS 26.5 golden guest images. Run one guest at a
+time on a 16-GB-class host. This arrangement is proposed, not yet accepted.
+
 An 8-GB Apple-silicon host should begin with one small guest and avoid
 concurrent VMs. A 16-GB host can begin with one 8-GB guest and may support two
 reduced guests for short tests after measurement. For three or more concurrent
@@ -78,6 +82,27 @@ observed P5 working on macOS `27.2`. That newer result is useful compatibility
 evidence, but it is outside Archiware's published range and must not be
 described as vendor certification. Recheck the download page for each P5 and
 macOS release rather than assuming forward compatibility.
+
+### Proposed macOS 27 dual-guest pilot
+
+The generic first pilot should use:
+
+- an Apple-silicon VM host that Apple officially supports on macOS 27;
+- macOS 27 on the host, enabling current Tart features including stacked
+  images;
+- one macOS 15 Sequoia golden guest for the established compatibility lane;
+- one macOS 26.5 Tahoe golden guest at the upper end of Archiware's current
+  published Apple M-series range;
+- one running P5 guest at a time on a 16-GB-class host;
+- 4 vCPU, 8 GB RAM, and a 60-80 GB sparse disk as the initial guest profile;
+- at least 120-150 GB of free fast storage before downloading both base images
+  and creating writable overlays.
+
+Keep the two golden guests unlicensed. Create disposable writable clones for
+installation and API testing. If a demo licence is later approved, apply it to
+one explicitly stateful clone rather than either golden image. macOS `27.2`
+native P5 testing remains a separate project-observed lane outside Archiware's
+published range; it is not one of the two initial VM guest baselines.
 
 ## Options considered
 
@@ -409,13 +434,14 @@ others.
 
 1. Privately inventory the proposed Apple-silicon and Intel hosts: memory,
    host OS, free space, Docker or VM-tool support, and wired networking.
-2. Provide at least 100 GiB of fast free storage for the one-VM pilot.
-3. Select the first guest/P5 pair from Archiware's current published range;
-   add macOS `27.2` only as a separate project-observed compatibility lane.
-4. Build one unlicensed Tart/Packer guest and accept installer, reboot, REST,
-   and CLI tests.
-5. Deploy the existing Docker Compose design on the Intel mini, adjust only
-   host paths and ports, and run a new Intel-macOS-host acceptance record.
+2. Provide at least 150 GB of fast free storage for both bases and the first
+   disposable overlays.
+3. On a macOS 27-capable Apple-silicon host, prepare separate macOS 15 and
+   macOS 26.5 golden guests using current Tart stacked images.
+4. Accept installer, reboot, REST, and CLI tests on one disposable macOS 15
+   clone, then repeat them on a macOS 26.5 clone.
+5. Deploy the existing Docker Compose design on the Intel Docker host, adjust
+   only host paths and ports, and run a new Intel-macOS-host acceptance record.
 6. Register all four P5 targets in Command Lab and prove that each remote
    profile reaches the intended server identity through REST and CLI.
 7. Repeat the representative macOS VM smoke test in Parallels.
@@ -428,6 +454,7 @@ others.
 ## Primary references
 
 - Archiware: [Current P5 downloads and tested operating-system ranges](https://www.archiware.com/download-p5/)
+- Apple: [Mac models compatible with macOS 27](https://support.apple.com/en-us/127255)
 - Apple: [Installing macOS on a virtual machine](https://developer.apple.com/documentation/virtualization/installing-macos-on-a-virtual-machine)
 - Apple: [Virtualize macOS on a Mac](https://developer.apple.com/documentation/virtualization/virtualize-macos-on-a-mac)
 - Apple: [macOS Ventura software licence agreement](https://www.apple.com/legal/sla/docs/macOSVentura.pdf) (example wording only; verify the exact installed release)
