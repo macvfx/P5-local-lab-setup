@@ -31,6 +31,10 @@ licensing, fictional Archive setup, and future REST automation are in
 [`Docs/MACOS_VM_P5_TEST_LAB_RESEARCH.md`](Docs/MACOS_VM_P5_TEST_LAB_RESEARCH.md).
 That work is proposed, not yet implemented or accepted.
 
+Tart install and golden-image setup steps for the Apple-silicon VM host are in
+[`Docs/MACOS_VM_TART_SETUP.md`](Docs/MACOS_VM_TART_SETUP.md). Those steps and
+helper scripts are written but not yet run or accepted.
+
 The native Intel x86-64 Linux Docker workflow also passed bounded acceptance
 on Ubuntu 24.04 LTS with Docker Engine 29.9.2 and P5 8.0.6. See the
 [Docker guide](Docs/DOCKER_ALTERNATIVE.md) and

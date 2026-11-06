@@ -1,0 +1,142 @@
+# macOS VM Tart Setup
+
+**Status:** Written setup steps and helper scripts, not yet executed or
+accepted. No golden image, clone, or P5 installation inside a Tart guest has
+been run or recorded yet. This implements the Phase 0/1 steps of
+[`MACOS_VM_P5_TEST_LAB_RESEARCH.md`](MACOS_VM_P5_TEST_LAB_RESEARCH.md) for the
+Apple-silicon VM host; it does not add Packer, licensing, or Archive
+automation.
+
+Parallels is intentionally out of scope for this document. Keep it as the
+separate vendor-reproduction lane described in the research doc.
+
+## What is scripted and what stays manual
+
+The deterministic, checkable parts of host setup are scripted:
+tool installation, Apple-silicon and free-space gates, and pulling or cloning
+each golden base image. These are safe to automate because each one either
+succeeds outright or refuses clearly with a reason.
+
+Completing Setup Assistant, installing OS updates inside a guest, and
+confirming the guest agent stay manual on purpose, matching the research
+doc's own phasing: "Add Packer only after both manual guests boot and have
+working networking." A first-boot macOS install involves interactive Apple
+ID/iCloud prompts, EULA acceptance, and licence-identity state that should be
+seen and confirmed by a person before anything scripts around it. Automate
+that step later, with Packer, only after this manual path has been proven on
+both golden images.
+
+## Prerequisites
+
+Confirm before running anything:
+
+```sh
+sw_vers
+df -g /
+```
+
+The Apple-silicon VM host should be on macOS 27 (for Tart's stacked-clone
+storage sharing) with at least 150GB free. The preflight script re-checks
+both, but review them yourself first, especially disk space, since base
+images and overlays grow quickly.
+
+## 1. Preflight
+
+```sh
+./scripts/tart-preflight.sh
+```
+
+This script:
+
+- Confirms the host is Apple silicon.
+- Reports the host macOS version and warns (without failing) if it is below
+  macOS 27, since stacked clones need macOS 27 and earlier hosts will fall
+  back to full-copy clones.
+- Installs Homebrew non-interactively if `brew` is not already on `PATH`.
+- Installs Tart with Homebrew if `tart` is not already present.
+- Refuses to continue if free space on `/` is below `TART_MIN_FREE_GB`
+  (default `150`; override by exporting that variable).
+
+Re-run it any time; it is idempotent and safe to run again after it fails.
+
+## 2. Pull or clone the golden base images
+
+Confirm the exact image reference against Cirrus Labs' current registry
+listing before pulling — tags change between releases and should not be
+assumed from this document.
+
+```sh
+./scripts/tart-pull-golden-image.sh macos15-golden ghcr.io/cirruslabs/macos-sequoia-base:latest
+./scripts/tart-pull-golden-image.sh macos26-golden ghcr.io/cirruslabs/macos-tahoe-base:latest
+```
+
+The script refuses to run if a VM already exists under that golden name
+(checked via `~/.tart/vms/<name>`), so it will not silently overwrite a
+golden image you already built or hardened.
+
+If no suitable prebuilt base exists for your target release, build one from
+an IPSW instead and skip straight to step 3:
+
+```sh
+tart create --from-ipsw=latest macos15-golden
+```
+
+## 3. Finish each golden image manually
+
+The pull/clone script prints these steps; they are repeated here for
+reference. Run this once per golden image:
+
+```sh
+tart run macos15-golden
+```
+
+While it boots:
+
+1. Complete Setup Assistant using a dedicated, fictional automation account —
+   never a production Apple ID or real identity.
+2. Install current OS updates for that release.
+3. Confirm the Tart guest agent is present and responding.
+4. Do **not** install P5, an activated licence, or any credential into this
+   image. It stays unlicensed and clean, per the research doc's warning
+   against ever activating or cloning an activated golden image.
+
+```sh
+tart stop macos15-golden
+```
+
+Repeat for `macos26-golden`. From this point, treat both golden images as
+read-only: never boot them directly for a test again, only clone from them.
+
+```sh
+tart list
+```
+
+Confirm both `macos15-golden` and `macos26-golden` appear.
+
+## 4. Disposable test clone lifecycle
+
+Not yet wrapped in a script, since this is where P5 installation and the
+milestone's acceptance checks attach. Repeat per test run:
+
+```sh
+tart clone macos15-golden p5-test-clone-01
+tart run p5-test-clone-01 &
+tart ip p5-test-clone-01
+tart exec p5-test-clone-01 -- sw_vers
+tart stop p5-test-clone-01
+tart delete p5-test-clone-01
+```
+
+On a macOS 27 host with a local base already pulled, the clone is a stacked
+overlay: it shares the golden base's blocks and only grows with what the
+clone itself writes, so this cycle is cheap to repeat.
+
+## Next steps, not yet done
+
+- Wrap the clone/test/delete cycle in a script once P5 installation and the
+  milestone's REST/CLI checks are defined for a Tart guest.
+- Add Packer only after both golden images have booted cleanly and networking
+  has been confirmed manually, per the research doc.
+- Record a dated acceptance result (environment, Tart version, image
+  references, pass/fail) once the first clone successfully runs P5, mirroring
+  [`ACCEPTANCE_2026-11-05.md`](ACCEPTANCE_2026-11-05.md).
