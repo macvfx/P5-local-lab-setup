@@ -30,8 +30,22 @@ fi
 echo "Homebrew: $(brew --version | head -n 1)"
 
 if ! command -v tart >/dev/null 2>&1; then
-    echo "Tart was not found; installing it with Homebrew."
-    brew install cirruslabs/cli/tart
+    echo "Tart was not found; updating Homebrew taps and installing it."
+    brew update
+    if ! brew install cirruslabs/cli/tart; then
+        cat <<EOF >&2
+
+brew install cirruslabs/cli/tart failed even after 'brew update'. This is a
+known failure mode where the cirruslabs/homebrew-cli tap's auto-generated
+formula uses a 'depends_on' ordering current Homebrew now refuses outright.
+Check https://github.com/cirruslabs/tart/releases for a newer tap fix, or
+install Tart from a release archive instead of Homebrew: run the binary at
+tart.app/Contents/MacOS/tart from the extracted app bundle (not the bare
+binary), since that path carries the embedded provisioning profile Bridged
+networking needs. See Docs/MACOS_VM_TART_SETUP.md for details.
+EOF
+        exit 1
+    fi
 fi
 echo "Tart: $(tart --version)"
 
