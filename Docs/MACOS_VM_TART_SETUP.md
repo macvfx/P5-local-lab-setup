@@ -61,42 +61,58 @@ Re-run it any time; it is idempotent and safe to run again after it fails.
 
 ### Troubleshooting: `brew install cirruslabs/cli/tart` fails with a `depends_on`/`on_macos` error
 
-The `cirruslabs/homebrew-cli` tap's `tart.rb` formula currently contains an
-unwrapped `depends_on :macos => :ventura` line (confirmed on the tap's
-`master` branch). Current Homebrew treats that old hash-rocket syntax as a
-hard error instead of a warning, and `brew update` alone does not fix it —
-this is a real bug in the tap, not a stale local cache.
+The `cirruslabs/homebrew-cli` tap carries an unwrapped
+`depends_on :macos => :ventura` line in more than one formula — confirmed in
+both `tart.rb` and its own dependency `softnet.rb` on the tap's `master`
+branch. Current Homebrew treats that old hash-rocket syntax as a hard error
+instead of a warning, and `brew update` alone does not fix it — this is a
+real bug in the tap, not a stale local cache, and patching a single formula
+is not enough since the bug recurs across the tap's formulas.
 
-The script now works around this automatically: after a plain
-`brew install cirruslabs/cli/tart` fails, it checks the tap's `tart.rb` for
-that exact line and, only if found, deletes it and retries the install once.
-That line is redundant anyway — the formula has a separate plain
-`depends_on :macos` with no version requirement. The edit is local to your
-Homebrew tap checkout and may be reverted (or skipped with a warning) the
-next time you run `brew update`; if the upstream tap hasn't shipped a fix by
-then, the script will simply reapply the same workaround on its next run.
+The script now works around this in two steps:
 
-To apply the same fix by hand instead:
+1. After a plain `brew install cirruslabs/cli/tart` fails, it sweeps every
+   `.rb` file in the local tap checkout, deletes that exact line wherever it
+   appears, and retries the install once. That line is redundant anyway —
+   each affected formula has a separate plain `depends_on :macos` with no
+   version requirement. These edits are local to your Homebrew tap checkout
+   and may be reverted (or skipped with a warning) the next time you run
+   `brew update`; the script simply reapplies them again on its next run if
+   needed.
+2. If Homebrew still cannot install Tart, the script looks for an existing
+   `/Applications/tart.app` or `~/Applications/tart.app` (from a manual
+   release-archive install) and symlinks its binary onto `PATH` at
+   `/opt/homebrew/bin/tart` instead of continuing to fight the tap.
+
+To apply the tap fix by hand instead:
 
 ```sh
 TAP_DIR=$(brew --repository cirruslabs/cli)
-sed -i '' '/depends_on :macos => :ventura/d' "$TAP_DIR/tart.rb"
+grep -rl 'depends_on :macos => :ventura' "$TAP_DIR"/*.rb | while read -r f; do
+    sed -i '' '/depends_on :macos => :ventura/d' "$f"
+done
 brew install cirruslabs/cli/tart
 ```
 
-If it still fails after that, install from a release archive instead of
-Homebrew:
+If Homebrew still won't install Tart, or you'd rather skip it entirely,
+install from a release archive instead:
 
 1. Download the current release for your architecture from
    <https://github.com/cirruslabs/tart/releases/latest> (confirm the exact
    asset name there; it is not pinned in this document).
-2. Extract it. Run the binary from inside the app bundle at
-   `tart.app/Contents/MacOS/tart`, not the bare extracted binary — that path
-   carries the embedded provisioning profile that Tart's Bridged networking
-   needs.
-3. Symlink that path into `/opt/homebrew/bin/tart` (or add
-   `tart.app/Contents/MacOS` to `PATH`) so `tart` resolves normally for the
-   rest of this document and the other scripts.
+2. Extract it so `tart.app` ends up in `/Applications` (or
+   `~/Applications`).
+3. Symlink the binary inside the app bundle onto `PATH`:
+
+   ```sh
+   mkdir -p /opt/homebrew/bin
+   ln -sf /Applications/tart.app/Contents/MacOS/tart /opt/homebrew/bin/tart
+   tart --version
+   ```
+
+   Always run the binary from inside the app bundle, not a bare extracted
+   binary — that path carries the embedded provisioning profile that Tart's
+   Bridged networking needs.
 
 ## 2. Pull or clone the golden base images
 
