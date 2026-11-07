@@ -34,23 +34,40 @@ if ! command -v tart >/dev/null 2>&1; then
     brew update
     if ! brew install cirruslabs/cli/tart; then
         TART_TAP_DIR=$(brew --repository cirruslabs/cli 2>/dev/null || true)
-        TART_TAP_FORMULA="$TART_TAP_DIR/tart.rb"
-        if [ -n "$TART_TAP_DIR" ] && [ -f "$TART_TAP_FORMULA" ] && \
-           grep -q 'depends_on :macos => :ventura' "$TART_TAP_FORMULA"; then
-            echo "Working around a known cirruslabs/homebrew-cli tap bug in $TART_TAP_FORMULA (see Docs/MACOS_VM_TART_SETUP.md)."
-            sed -i '' '/depends_on :macos => :ventura/d' "$TART_TAP_FORMULA"
+        if [ -n "$TART_TAP_DIR" ] && [ -d "$TART_TAP_DIR" ]; then
+            for TART_TAP_FORMULA in "$TART_TAP_DIR"/*.rb; do
+                [ -f "$TART_TAP_FORMULA" ] || continue
+                if grep -q 'depends_on :macos => :ventura' "$TART_TAP_FORMULA"; then
+                    echo "Working around a known cirruslabs/homebrew-cli tap bug in $TART_TAP_FORMULA (see Docs/MACOS_VM_TART_SETUP.md)."
+                    sed -i '' '/depends_on :macos => :ventura/d' "$TART_TAP_FORMULA"
+                fi
+            done
         fi
         if ! brew install cirruslabs/cli/tart; then
-            cat <<EOF >&2
+            echo "Homebrew still cannot install Tart; looking for an existing tart.app instead." >&2
+            TART_APP=""
+            for CANDIDATE in /Applications/tart.app "$HOME/Applications/tart.app"; do
+                if [ -x "$CANDIDATE/Contents/MacOS/tart" ]; then
+                    TART_APP=$CANDIDATE
+                    break
+                fi
+            done
+            if [ -n "$TART_APP" ]; then
+                echo "Found $TART_APP; linking it onto PATH."
+                mkdir -p /opt/homebrew/bin
+                ln -sf "$TART_APP/Contents/MacOS/tart" /opt/homebrew/bin/tart
+            else
+                cat <<EOF >&2
 
-brew install cirruslabs/cli/tart still failed. Check
-https://github.com/cirruslabs/tart/releases for a newer tap fix, or install
-Tart from a release archive instead of Homebrew: run the binary at
-tart.app/Contents/MacOS/tart from the extracted app bundle (not the bare
-binary), since that path carries the embedded provisioning profile Bridged
-networking needs. See Docs/MACOS_VM_TART_SETUP.md for details.
+Homebrew cannot currently install Tart from the cirruslabs/homebrew-cli tap
+(more than one formula in it carries the same depends_on bug). Download the
+current release archive from
+https://github.com/cirruslabs/tart/releases/latest, move tart.app to
+/Applications, then re-run this script. See Docs/MACOS_VM_TART_SETUP.md for
+why the app bundle path matters for Bridged networking.
 EOF
-            exit 1
+                exit 1
+            fi
         fi
     fi
 fi
