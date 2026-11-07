@@ -149,7 +149,8 @@ While it boots:
 
 1. Complete Setup Assistant using a dedicated, fictional automation account —
    never a production Apple ID or real identity.
-2. Install current OS updates for that release.
+2. Install current OS updates for that release, disk space and update
+   personalization permitting (see the known limitation below).
 3. Confirm the Tart guest agent is present and responding.
 4. Do **not** install P5, an activated licence, or any credential into this
    image. It stays unlicensed and clean, per the research doc's warning
@@ -161,6 +162,26 @@ tart stop macos15-golden
 
 Repeat for `macos26-golden`. From this point, treat both golden images as
 read-only: never boot them directly for a test again, only clone from them.
+
+### Known limitation: `macos15-golden` is pinned at 15.7.7
+
+In-place Software Update from 15.7.7 to 15.8.2 repeatedly failed on this
+guest with "Failed to personalize the software update," including after
+clearing `/Library/Updates`, confirming guest clock accuracy, and fetching
+the full installer instead of the incremental OTA delta. This was accepted
+as a known limitation rather than pursued further, since in-place updates on
+a virtualized macOS guest carry a real risk of leaving the guest
+non-bootable, and `macos15-golden` already had real configuration work done
+on it (admin password change, new standard user, time zone). A
+pre-update clone was kept and restored to recover a known-good state after
+the failed attempts.
+
+Before relying on `macos15-golden` for anything OS-version-sensitive, check
+whether Cirrus Labs has republished `macos-sequoia-base` at a newer patch
+level (`tart pull ghcr.io/cirruslabs/macos-sequoia-base:latest` and compare
+versions) or rebuild the golden image directly from a current IPSW
+(`tart create --from-ipsw=latest`) rather than attempting another in-place
+update on this image.
 
 ```sh
 tart list
