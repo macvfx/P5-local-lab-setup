@@ -59,6 +59,45 @@ This script:
 
 Re-run it any time; it is idempotent and safe to run again after it fails.
 
+### Troubleshooting: `brew install cirruslabs/cli/tart` fails with a `depends_on`/`on_macos` error
+
+The `cirruslabs/homebrew-cli` tap's `tart.rb` formula currently contains an
+unwrapped `depends_on :macos => :ventura` line (confirmed on the tap's
+`master` branch). Current Homebrew treats that old hash-rocket syntax as a
+hard error instead of a warning, and `brew update` alone does not fix it —
+this is a real bug in the tap, not a stale local cache.
+
+The script now works around this automatically: after a plain
+`brew install cirruslabs/cli/tart` fails, it checks the tap's `tart.rb` for
+that exact line and, only if found, deletes it and retries the install once.
+That line is redundant anyway — the formula has a separate plain
+`depends_on :macos` with no version requirement. The edit is local to your
+Homebrew tap checkout and may be reverted (or skipped with a warning) the
+next time you run `brew update`; if the upstream tap hasn't shipped a fix by
+then, the script will simply reapply the same workaround on its next run.
+
+To apply the same fix by hand instead:
+
+```sh
+TAP_DIR=$(brew --repository cirruslabs/cli)
+sed -i '' '/depends_on :macos => :ventura/d' "$TAP_DIR/tart.rb"
+brew install cirruslabs/cli/tart
+```
+
+If it still fails after that, install from a release archive instead of
+Homebrew:
+
+1. Download the current release for your architecture from
+   <https://github.com/cirruslabs/tart/releases/latest> (confirm the exact
+   asset name there; it is not pinned in this document).
+2. Extract it. Run the binary from inside the app bundle at
+   `tart.app/Contents/MacOS/tart`, not the bare extracted binary — that path
+   carries the embedded provisioning profile that Tart's Bridged networking
+   needs.
+3. Symlink that path into `/opt/homebrew/bin/tart` (or add
+   `tart.app/Contents/MacOS` to `PATH`) so `tart` resolves normally for the
+   rest of this document and the other scripts.
+
 ## 2. Pull or clone the golden base images
 
 Confirm the exact image reference against Cirrus Labs' current registry
