@@ -1,15 +1,31 @@
 # P5 Local Lab
 
-P5 Local Lab is a disposable local test environment for Archiware P5 on Apple
-silicon Macs. It converts Archiware's official Linux Docker root filesystem
-into a local OCI image and runs the Intel/AMD64 P5 build with Apple's Rosetta
-container support.
+P5 Local Lab is a disposable local test lab for exploring multiple ways to
+run and test Archiware P5 on Apple silicon Macs:
+
+- **Path A — Linux P5 in Apple's native `container` runtime** —
+  Archiware's official Linux Docker root filesystem converted to a local OCI
+  image, running the Intel/AMD64 P5 build under Rosetta. Accepted; this is
+  the path the walkthrough below sets up by default.
+- **Path B — Linux P5 in Docker** — native Intel x86-64 (accepted) or
+  Docker Desktop on Apple silicon under AMD64 emulation (experimental,
+  untested). See the [Docker guide](Docs/DOCKER_ALTERNATIVE.md).
+- **Path C — Native macOS P5 in a disposable Tart virtual machine** —
+  golden macOS images with throwaway per-test clones, for testing P5 as it
+  actually runs on macOS rather than inside a Linux container. Written and
+  in progress, not yet accepted. See
+  [`Docs/MACOS_VM_TART_SETUP.md`](Docs/MACOS_VM_TART_SETUP.md) and the
+  [research and roadmap](Docs/MACOS_VM_P5_TEST_LAB_RESEARCH.md).
+
+Each path is tracked and accepted independently — passing one does not imply
+the others work; see each path's own acceptance record or status note.
 
 **This is currently a reproducible automation project, not a standalone macOS
-app.** Its shell scripts install no system software: they verify Apple's
-container runtime, download and verify P5 directly from Archiware, build one
-local image, and create isolated test instances. ContainerManager is the
-recommended optional graphical interface.
+app.** Its shell scripts install no system software beyond what each path
+explicitly needs: they verify the chosen runtime, download and verify P5
+directly from Archiware, build or pull images, and create isolated,
+disposable test instances. ContainerManager is the recommended optional
+graphical interface for the Apple-container path.
 
 The first milestone is deliberately narrow: prove that one P5 8.0.6 server can
 start, expose its web, REST, and CLI/awsock interfaces on localhost, see a
@@ -26,18 +42,8 @@ The localhost CLI/awsock mapping was added and smoke-tested on 2026-11-06. See
 [`Docs/CLI_PORT_ACCEPTANCE_2026-11-06.md`](Docs/CLI_PORT_ACCEPTANCE_2026-11-06.md)
 for the exact REST/CLI mappings, evidence, and remaining authenticated test.
 
-Research and a staged roadmap for disposable macOS P5 test VMs, trial
-licensing, fictional Archive setup, and future REST automation are in
-[`Docs/MACOS_VM_P5_TEST_LAB_RESEARCH.md`](Docs/MACOS_VM_P5_TEST_LAB_RESEARCH.md).
-That work is proposed, not yet implemented or accepted.
-
-Tart install and golden-image setup steps for the Apple-silicon VM host are in
-[`Docs/MACOS_VM_TART_SETUP.md`](Docs/MACOS_VM_TART_SETUP.md). Those steps and
-helper scripts are written but not yet run or accepted.
-
-The native Intel x86-64 Linux Docker workflow also passed bounded acceptance
-on Ubuntu 24.04 LTS with Docker Engine 29.9.2 and P5 8.0.6. See the
-[Docker guide](Docs/DOCKER_ALTERNATIVE.md) and
+The native Intel x86-64 Linux Docker workflow passed bounded acceptance on
+Ubuntu 24.04 LTS with Docker Engine 29.9.2 and P5 8.0.6; see the
 [dated Linux acceptance record](Docs/DOCKER_LINUX_ACCEPTANCE_2026-11-05.md).
 Docker Desktop on Apple silicon remains experimental and untested.
 
@@ -51,7 +57,12 @@ Docker Desktop on Apple silicon remains experimental and untested.
 - Deleting a container deletes P5 configuration stored in its writable layer;
   the bind-mounted fixture folders remain on the Mac.
 
-## From a new Mac to a P5 lab
+## Path A: Apple-container setup, from a new Mac to a P5 lab
+
+This walkthrough sets up Path A (Linux P5 under Rosetta in Apple's `container`
+runtime). For Path B or Path C, see the
+[Docker guide](Docs/DOCKER_ALTERNATIVE.md) or
+[`Docs/MACOS_VM_TART_SETUP.md`](Docs/MACOS_VM_TART_SETUP.md).
 
 ### 1. Install Apple's container runtime
 

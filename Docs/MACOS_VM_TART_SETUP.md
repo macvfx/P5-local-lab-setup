@@ -1,4 +1,4 @@
-# macOS VM Tart Setup
+# Path C: macOS VM Tart Setup
 
 **Status:** Written setup steps and helper scripts, not yet executed or
 accepted. No golden image, clone, or P5 installation inside a Tart guest has
@@ -188,6 +188,26 @@ tart list
 ```
 
 Confirm both `macos15-golden` and `macos26-golden` appear.
+
+### Known limitation: no Tart guest agent in these base images; use SSH instead
+
+`tart exec` failed against a clone of `macos26-golden` with exit code `125`
+(an RPC-connection failure, not a command-not-found error from inside the
+guest). Tart's own documentation notes the guest agent ships only in
+"non-vanilla" Cirrus Labs images; `macos-sequoia-base` and
+`macos-tahoe-base` do not appear to include it, and there is no host-side
+command to install it retroactively.
+
+This does not block testing. Remote Login (SSH) is pre-enabled on both
+golden images, so use SSH instead of `tart exec` for any scripted
+interaction with a clone:
+
+```sh
+tart ip p5-test-clone-01
+ssh <username>@<ip-from-above>
+```
+
+`tart ip` does not depend on the guest agent, only `tart exec` does.
 
 ## 4. Disposable test clone lifecycle
 

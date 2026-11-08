@@ -1,4 +1,4 @@
-# Docker Alternative for P5 Local Lab
+# Path B: Docker Alternative for P5 Local Lab
 
 **Status:** Accepted on native Intel x86-64 Linux; Docker Desktop on Apple
 silicon remains experimental and untested
