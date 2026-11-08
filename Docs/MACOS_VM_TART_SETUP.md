@@ -271,6 +271,13 @@ clone itself writes, so this cycle is cheap to repeat.
 
 ## Next steps, not yet done
 
+- **Backlogged: bridged networking on wired Ethernet.** `tart run --net-bridged=en0`
+  was deferred specifically because the VM host was still on Wi-Fi, where
+  bridged mode has a documented ARP/DHCP reliability issue. Confirm the Mac
+  mini's active interface name once it's wired (`networksetup -listallhardwareports`),
+  then retry bridged mode and check `tart ip` returns a real LAN address, not
+  a `169.254.x.x` self-assigned one, before relying on it to reach another
+  VM from the controller or laptop.
 - Wrap the clone/test/delete cycle in a script once P5 installation and the
   milestone's REST/CLI checks are defined for a Tart guest.
 - Add Packer only after both golden images have booted cleanly and networking

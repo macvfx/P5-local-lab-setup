@@ -383,6 +383,11 @@ implemented; do the per-instance local-folder setup first and come back to
 shared storage as its own test once Archive configuration is working on at
 least one instance.
 
+Research on which parts of Archive configuration (index/pool/plan creation
+vs. submitting and monitoring jobs against ones that already exist) can be
+automated via the P5 REST API, versus which stay manual per container, is in
+[`Docs/REST_API_AUTOMATION_NOTES.md`](Docs/REST_API_AUTOMATION_NOTES.md).
+
 ## Multiple P5 versions
 
 Every pinned P5 version lives as a small file under `versions/<version>.env`
