@@ -13,12 +13,10 @@ Sources, both first-party:
   REST API guide (`docs/P5-REST-API-GUIDE.md`) — documents real, working
   usage against a live P5 server for checking archived status and
   submitting jobs.
-- Archiware's official OpenAPI 3.0 spec for **P5 REST API v8.0.0**, fetched
-  from <https://www.archiware.com/blog/redoc/p5_rest_api/P5_openapi.json>
-  (the page at `.../awp5api.html` is a ReDoc viewer that loads this file;
-  `blog.archiware.com`, the subdomain the manuals page links to, is not
-  reachable from this session, but the same content is also served under
-  `www.archiware.com/blog/...`, which is). A copy is saved at
+- Archiware's official OpenAPI 3.0 spec for **P5 REST API v8.0.0**, published
+  at <https://www.archiware.com/blog/redoc/p5_rest_api/P5_openapi.json> (the
+  `.../awp5api.html` page is a ReDoc viewer that loads this file). Read in
+  full and saved at
   [`Docs/reference/P5_openapi_v8.0.0.json`](reference/P5_openapi_v8.0.0.json)
   so this doesn't depend on that URL staying up — 69 paths, 30 `POST`, 20
   `PUT`, 17 `DELETE` operations across archive, backup, backup2go, general,
@@ -34,9 +32,10 @@ Sources, both first-party:
 - **Format:** JSON bodies; most resources also take header parameters for
   some fields (see Pool below) rather than everything living in the body.
 
-## The open question, resolved: yes, plans/pools/indexes can be created via REST
+## Plans, pools, and indexes can be created via REST — creating a pool and having a usable destination are two different things
 
-Confirmed directly in the official spec:
+Confirmed directly in the official spec: `POST` endpoints exist for all
+three resource types.
 
 | Resource | Create endpoint | Required fields |
 | --- | --- | --- |
@@ -44,6 +43,11 @@ Confirmed directly in the official spec:
 | Archive plan | `POST /archive/plans` | body: `description` (required, must be unique), plus `database` (existing index name), `pool` (existing pool name), `enabled`, `deletefiles`, `deleteall` |
 | Media pool | `POST /general/pools` | header: `name` (required); body: `usage` (`Archive`/`Backup`), `mediatype` (`OPTICAL`/`TAPE`/`DISK`), `blocksize`, `drivecount` |
 | Client | `POST /general/clients` | body: `name` (use `"localhost"` for the local client), `hostname`, `port`, plus auth/encryption options — but P5 likely already registers a `localhost` client by default, so this may not even be needed for same-host archiving |
+
+That table answers "can the resource be created" — it does not answer
+"is the resource usable once created." For the media pool specifically,
+those are different questions with different answers: see the next
+section.
 
 Real example from the spec itself for index creation:
 
@@ -60,9 +64,14 @@ index → plan (the plan references the other two by name), matching exactly
 the roadmap's fictional naming (`TEST-POOL` / `Example-Archive` /
 `Example-Plan`).
 
-## Confirmed, empirically: a DISK pool's storage can't be attached via REST
+## Creating a DISK pool and having a usable archive destination are two different things
 
-Tested directly against a live `p5-lab-03` container (P5 8.0.6):
+`POST /general/pools` creates a **pool object** — a named entry in P5's
+configuration database with a usage type, media type, block size, and
+drive count. It does not create or attach any actual storage. A pool with
+no volume behind it cannot be archived to, regardless of whether the pool
+object itself exists. Confirmed by testing directly against a live
+`p5-lab-03` container (P5 8.0.6), not inferred from the schema alone:
 
 ```
 $ curl -u admin:admin -X POST "http://127.0.0.1:20002/rest/v1/general/pools" \
