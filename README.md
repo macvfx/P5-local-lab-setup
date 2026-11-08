@@ -284,6 +284,35 @@ container filesystem:
 ./scripts/smoke-test.sh p5-lab-02 20001 29002
 ```
 
+### Creating several instances at once
+
+```sh
+./scripts/create-instances.sh <count> [version] [name-prefix]
+```
+
+Scans `instances/` for the highest existing `<prefix>-NN` instance, then
+creates `<count>` more starting from the next number, incrementing REST and
+CLI ports by one per instance the same way manual naming already does.
+Defaults to the `p5-lab` prefix and the current pinned version. For
+example, with `p5-lab-01` already created:
+
+```sh
+./scripts/create-instances.sh 3
+```
+
+creates `p5-lab-02`, `p5-lab-03`, and `p5-lab-04` with their ports following
+the same `REST 20000+N / CLI 29001+N` pattern, and prints the matching
+`smoke-test.sh` command for each. To create instances on a non-current
+pinned version instead:
+
+```sh
+./scripts/create-instances.sh 2 8.0.5
+```
+
+Each instance is still created one at a time through `create-instance.sh`,
+so the same name-collision guard and per-instance folder setup apply; this
+script only automates picking names and ports.
+
 Reset an instance to a fresh P5 server:
 
 ```sh
