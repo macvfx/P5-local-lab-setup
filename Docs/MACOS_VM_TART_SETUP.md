@@ -238,10 +238,10 @@ than storage private to one guest. Two ways to do this, neither verified
 yet:
 
 - **Host-shared folder via Tart's directory-sharing feature.** Tart's own
-  GitHub README does not document the exact flag, and `tart.run` (where the
-  full docs live) was not reachable from the session that wrote this
-  document. Check `tart run --help` directly for the current directory-share
-  flag and confirm how the guest mounts it before relying on it.
+  GitHub README does not document the exact flag; the full docs live at
+  `tart.run`. Check `tart run --help` directly for the current
+  directory-share flag and confirm how the guest mounts it before relying
+  on it.
 - **A real shared volume on the LAN** (e.g. a folder on the controller Mac
   or a NAS target), mounted independently inside each guest over SMB/AFP,
   once bridged networking is working. This is closer to how P5 is actually
