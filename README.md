@@ -3,18 +3,19 @@
 P5 Local Lab is a disposable local test lab for exploring multiple ways to
 run and test Archiware P5 on Apple silicon Macs:
 
-- **Linux P5 in Apple's native `container` runtime** — Archiware's official
-  Linux Docker root filesystem converted to a local OCI image, running the
-  Intel/AMD64 P5 build under Rosetta. Accepted; this is the path the
-  walkthrough below sets up by default.
-- **Linux P5 in Docker** — native Intel x86-64 (accepted) or Docker Desktop
-  on Apple silicon under AMD64 emulation (experimental, untested). See the
-  [Docker guide](Docs/DOCKER_ALTERNATIVE.md).
-- **Native macOS P5 in a disposable Tart virtual machine** — golden macOS
-  images with throwaway per-test clones, for testing P5 as it actually runs
-  on macOS rather than inside a Linux container. Written and in progress,
-  not yet accepted. See [`Docs/MACOS_VM_TART_SETUP.md`](Docs/MACOS_VM_TART_SETUP.md)
-  and the [research and roadmap](Docs/MACOS_VM_P5_TEST_LAB_RESEARCH.md).
+- **Path A — Linux P5 in Apple's native `container` runtime** —
+  Archiware's official Linux Docker root filesystem converted to a local OCI
+  image, running the Intel/AMD64 P5 build under Rosetta. Accepted; this is
+  the path the walkthrough below sets up by default.
+- **Path B — Linux P5 in Docker** — native Intel x86-64 (accepted) or
+  Docker Desktop on Apple silicon under AMD64 emulation (experimental,
+  untested). See the [Docker guide](Docs/DOCKER_ALTERNATIVE.md).
+- **Path C — Native macOS P5 in a disposable Tart virtual machine** —
+  golden macOS images with throwaway per-test clones, for testing P5 as it
+  actually runs on macOS rather than inside a Linux container. Written and
+  in progress, not yet accepted. See
+  [`Docs/MACOS_VM_TART_SETUP.md`](Docs/MACOS_VM_TART_SETUP.md) and the
+  [research and roadmap](Docs/MACOS_VM_P5_TEST_LAB_RESEARCH.md).
 
 Each path is tracked and accepted independently — passing one does not imply
 the others work; see each path's own acceptance record or status note.
@@ -56,10 +57,11 @@ Docker Desktop on Apple silicon remains experimental and untested.
 - Deleting a container deletes P5 configuration stored in its writable layer;
   the bind-mounted fixture folders remain on the Mac.
 
-## From a new Mac to a P5 lab
+## Path A: Apple-container setup, from a new Mac to a P5 lab
 
-This walkthrough sets up the Apple-container path (Linux P5 under Rosetta).
-For the other paths, see the [Docker guide](Docs/DOCKER_ALTERNATIVE.md) or
+This walkthrough sets up Path A (Linux P5 under Rosetta in Apple's `container`
+runtime). For Path B or Path C, see the
+[Docker guide](Docs/DOCKER_ALTERNATIVE.md) or
 [`Docs/MACOS_VM_TART_SETUP.md`](Docs/MACOS_VM_TART_SETUP.md).
 
 ### 1. Install Apple's container runtime
