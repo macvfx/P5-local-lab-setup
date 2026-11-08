@@ -1,74 +1,117 @@
 # P5 REST API automation: what's manual, what's automatable
 
-**Status:** Research notes, not yet implemented. Grounded in the user's own
-first-party [`macvfx/p5ArchiveManager`](https://github.com/macvfx/p5ArchiveManager)
-REST API guide (`docs/P5-REST-API-GUIDE.md`), which documents real, working
-usage against a live P5 server — not guessed or invented endpoints, per the
-caution already stated in
-[`MACOS_VM_P5_TEST_LAB_RESEARCH.md`](MACOS_VM_P5_TEST_LAB_RESEARCH.md).
-One real gap remains open: see "Unconfirmed" below.
+**Status:** Research notes, not yet implemented. The core question — can
+archive indexes, pools, and plans be *created* via REST, not just used once
+someone sets them up by hand? — is now answered from Archiware's own
+official OpenAPI spec, not inferred or guessed.
+
+Sources, both first-party:
+
+- The user's own [`macvfx/p5ArchiveManager`](https://github.com/macvfx/p5ArchiveManager)
+  REST API guide (`docs/P5-REST-API-GUIDE.md`) — documents real, working
+  usage against a live P5 server for checking archived status and
+  submitting jobs.
+- Archiware's official OpenAPI 3.0 spec for **P5 REST API v8.0.0**, fetched
+  from <https://www.archiware.com/blog/redoc/p5_rest_api/P5_openapi.json>
+  (the page at `.../awp5api.html` is a ReDoc viewer that loads this file;
+  `blog.archiware.com`, the subdomain the manuals page links to, is not
+  reachable from this session, but the same content is also served under
+  `www.archiware.com/blog/...`, which is). A copy is saved at
+  [`Docs/reference/P5_openapi_v8.0.0.json`](reference/P5_openapi_v8.0.0.json)
+  so this doesn't depend on that URL staying up — 69 paths, 30 `POST`, 20
+  `PUT`, 17 `DELETE` operations across archive, backup, backup2go, general,
+  license, object-synchronize, restore, and synchronize resource groups.
 
 ## REST API basics (confirmed)
 
-- **Base URL:** `http://<host>:<port>/rest/v1/...`. The path version (`v1`)
-  does not track the server version — a P5 8.x server still uses `v1`.
+- **Base URL:** `http://<host>:<port>/rest/v1/...` (the spec's own server
+  template: `http://{p5address}/rest/{version}`, version defaulting to
+  `v1`). The path version does not track the server version — confirmed
+  directly in the spec's `info.version: "8.0.0"` alongside `v1` paths.
 - **Auth:** HTTP Basic (a P5 user's username/password).
-- **Format:** JSON bodies. List endpoints generally also take an `/{id}`
-  suffix for a single item.
-- **Read vs. write:** almost everything useful for a client app is `GET`
-  (browsing indexes, clients, plans, jobs). The one write pattern
-  `p5ArchiveManager` actually uses is submitting an archive job against an
-  **already-configured** plan — it does not create plans, pools, or
-  indexes from scratch.
+- **Format:** JSON bodies; most resources also take header parameters for
+  some fields (see Pool below) rather than everything living in the body.
 
-This matches exactly what a demo of **P5 Command Lab** needs at the basic
-level: Basic auth against `http://<lab-instance-ip>:<rest-port>/rest/v1/`,
-read the configured clients/plans/indexes to show real data, and — if the
-demo calls for it — submit one real archive job live and poll it to
-completion.
+## The open question, resolved: yes, plans/pools/indexes can be created via REST
 
-## For each freshly created P5 container: manual vs. automatable
+Confirmed directly in the official spec:
+
+| Resource | Create endpoint | Required fields |
+| --- | --- | --- |
+| Archive index | `POST /archive/indexes` | body: `name`, `description` (both required) |
+| Archive plan | `POST /archive/plans` | body: `description` (required, must be unique), plus `database` (existing index name), `pool` (existing pool name), `enabled`, `deletefiles`, `deleteall` |
+| Media pool | `POST /general/pools` | header: `name` (required); body: `usage` (`Archive`/`Backup`), `mediatype` (`OPTICAL`/`TAPE`/`DISK`), `blocksize`, `drivecount` |
+| Client | `POST /general/clients` | body: `name` (use `"localhost"` for the local client), `hostname`, `port`, plus auth/encryption options — but P5 likely already registers a `localhost` client by default, so this may not even be needed for same-host archiving |
+
+Real example from the spec itself for index creation:
+
+```json
+POST /archive/indexes
+{
+  "name": "Cloud-Archive",
+  "description": "external file archive"
+}
+```
+
+So the intended creation order for a from-scratch Archive setup is: pool →
+index → plan (the plan references the other two by name), matching exactly
+the roadmap's fictional naming (`TEST-POOL` / `Example-Archive` /
+`Example-Plan`).
+
+## The one real remaining gap: a DISK pool's actual storage location
+
+`PoolCreate`'s body schema (`usage`, `mediatype`, `blocksize`, `drivecount`)
+has **no path or directory field** — confirmed by reading the full schema,
+not just its summary. There's also no `POST /general/volumes` to create a
+new volume from scratch; the only volume-related write endpoints
+(`PUT`/`POST /general/volumes/{volumeID}`) operate on a volume that already
+exists. This means creating a `DISK`-type pool via REST sets up the pool's
+*parameters*, but associating it with a real filesystem directory — the
+part that actually makes it usable for archiving to local disk — isn't
+visible anywhere in this API surface. That step most likely still needs the
+P5 web GUI (or CLI) once, per pool, until proven otherwise against a real
+server.
+
+## Confirmed: license activation and user/password management are not REST operations at all
+
+- **License:** the `license` tag has exactly two operations, both `GET`
+  (`/license/resources`, `/license/resources/{resourceID}`) — no `POST`,
+  `PUT`, or `DELETE` anywhere under `license`. This isn't just this
+  project's policy of keeping licensing manual (stated already in
+  `MACOS_VM_P5_TEST_LAB_RESEARCH.md`) — the API genuinely has no write
+  operation for it.
+- **Users/passwords:** there is no `user`-tagged resource group, and no
+  path containing `password` anywhere in the 69 paths, except as a field
+  *on a client* (`GeneralClientCreateRequest.newpassword` — that's the
+  client's own password for P5 to reach it, not the P5 admin account's
+  login). Initial login and changing the P5 admin password stay manual;
+  this API doesn't expose that at all, as far as this spec shows.
+
+## For each freshly created P5 container: manual vs. automatable (updated)
 
 | Step | Manual or automatable? | Notes |
 | --- | --- | --- |
-| Local storage folders (source/archive/restore) | **Already automated** | `prepare-instance-folder.sh` already creates these at container-creation time; not a P5 REST concern at all. |
-| First login with the default admin account | Manual, for now | Default credentials exist, but whether P5 exposes a REST path usable *before* any password change is unconfirmed — see below. |
-| Changing the admin password | Manual, for now | No endpoint for this appears in `p5ArchiveManager`'s guide; that app never needed to change a password, so absence here isn't proof it doesn't exist — just unconfirmed. |
-| Demo/trial license activation | **Manual by project policy**, regardless of REST feasibility | `MACOS_VM_P5_TEST_LAB_RESEARCH.md` already states this explicitly: "confirm the trial-licence rules... before automating any licensed clone lifecycle." Keep this a human-confirmed step even if a licensing endpoint exists. |
-| Creating an archive index | **Unconfirmed** | Not covered by `p5ArchiveManager`'s guide (it only lists/queries existing indexes). See "Unconfirmed" below. |
-| Creating a disk storage pool | **Unconfirmed** | No mention of pools anywhere in that app's docs at all — it only reads a plan's `pool` attribute as a name, never creates one. |
-| Creating an archive plan | **Unconfirmed** | Same gap — the guide lists/reads plans, never creates one. |
-| Creating metadata keys on an *existing* index | **Automatable, confirmed** | `POST /archive/indexes/{index}/keys` — but this presumes the index already exists. |
-| Listing clients, plans, indexes, jobs | **Automatable, confirmed** | All plain `GET`, no side effects. |
-| Submitting an archive job against an existing plan | **Automatable, confirmed** | `POST /archive/plans/{planID}/archiveselections` — see the quick reference below. |
+| Local storage folders (source/archive/restore) | **Already automated** | `prepare-instance-folder.sh`, no P5 REST involved. |
+| First login with the default admin account | **Manual — confirmed, not a REST gap** | No user/session-login endpoint exists in the spec at all. |
+| Changing the admin password | **Manual — confirmed, not a REST gap** | Same; no endpoint. |
+| Demo/trial license activation | **Manual — confirmed, not a REST gap, and project policy either way** | `license` is read-only in the spec. |
+| Creating a media pool | **Automatable for parameters; manual for storage path** | `POST /general/pools` sets `usage`/`mediatype`/`blocksize`/`drivecount`; attaching a real disk directory isn't visible in this API. |
+| Creating an archive index | **Automatable, confirmed** | `POST /archive/indexes` — `name` + `description`. |
+| Creating an archive plan | **Automatable, confirmed** | `POST /archive/plans` — references the pool and index by name. |
+| Creating metadata keys on an index | **Automatable, confirmed** | `POST /archive/indexes/{index}/keys`. |
+| Listing clients, plans, indexes, jobs | **Automatable, confirmed** | Plain `GET`, no side effects. |
+| Submitting an archive job | **Automatable, confirmed** | `POST /archive/plans/{planID}/archiveselections`. |
 | Monitoring a submitted job | **Automatable, confirmed** | `GET /general/jobs/{id}` (+ `/report`, `/protocol`, `/inventory`). |
-| Checking whether a given file is already archived | **Automatable, confirmed** | Walk `GET /archive/indexes/{index}/inventory/{path}` for the local path in question; no cross-index search endpoint exists. |
+| Checking whether a file is already archived | **Automatable, confirmed** | Walk `GET /archive/indexes/{index}/inventory/{path}`. |
 
-## Unconfirmed: can plans/pools/indexes be created via REST at all?
-
-This is the one real open question, and it matters a lot for the "automate
-setting up a bunch of P5 containers" goal — if the answer is no, archive
-index/pool/plan creation stays a one-time manual step per container
-regardless of how much else gets automated.
-
-`p5ArchiveManager`'s guide doesn't answer this because that app was built
-to *use* already-configured plans, not provision them — the absence of a
-create endpoint in its guide is not evidence the API lacks one. The
-authoritative source is Archiware's own published reference:
-
-<https://blog.archiware.com/redoc/p5_rest_api/awp5api.html>
-
-This session could not reach `blog.archiware.com` to check it directly —
-that host isn't on this cloud session's allowed network list. Check it
-directly (or allow that host in this session's settings and ask again) for
-whether `POST /archive/indexes`, `POST /archive/plans`, or an equivalent
-pool-creation endpoint exists before assuming index/pool/plan setup can be
-scripted.
-
-## Quick reference (from `p5ArchiveManager`'s guide)
+## Quick reference
 
 | Purpose | Method & endpoint |
 | --- | --- |
+| Create a media pool | `POST /general/pools` (header `name`) |
+| Create an archive index | `POST /archive/indexes` |
+| Create an archive plan | `POST /archive/plans` |
+| Create index metadata keys | `POST /archive/indexes/{index}/keys` |
 | List archive indexes | `GET /archive/indexes` |
 | Browse an index's inventory | `GET /archive/indexes/{index}/inventory/{path}` |
 | Resolve a volume (label, barcode, location) | `GET /general/volumes/{id}` |
@@ -79,27 +122,41 @@ scripted.
 | Job report (text) | `GET /general/jobs/{id}/report` |
 | Job protocol (json/xml) | `GET /general/jobs/{id}/protocol` |
 | Job inventory (file list) | `GET /general/jobs/{id}/inventory` |
-| Create index metadata keys | `GET`/`POST /archive/indexes/{index}/keys` |
 
-One quirk worth carrying over for any lab automation that compares names:
-P5 encodes certain special characters in archived names/paths as
-**caret + two hex digits** (`^XX`) — the REST API returns the encoded
-form, while the web GUI decodes it for display. Decode `^XX` sequences
-before comparing API-returned names against names on disk.
+One quirk worth carrying over for any lab automation that compares names
+(from `p5ArchiveManager`'s guide, not the OpenAPI spec): P5 encodes certain
+special characters in archived names/paths as **caret + two hex digits**
+(`^XX`) — the REST API returns the encoded form, while the web GUI decodes
+it for display. Decode `^XX` sequences before comparing API-returned names
+against names on disk.
 
 ## What this means for the lab, right now
 
-- Container storage setup is already automated (step 1 of the registry
-  work applies here too — nothing new needed).
-- Login, password change, and license activation stay manual per
-  container until the open question above is resolved — and license
-  activation stays manual regardless, by existing project policy.
-- Once a plan/index/pool exist on a container (by whatever means), the
-  actual archive-job submission, monitoring, and archived-status checking
-  are already provably automatable, using exactly the endpoints
-  `p5ArchiveManager` already relies on in production.
-- For demoing **P5 Command Lab** specifically: point it at a lab
-  container's REST port with Basic auth, same as any other client — the
-  lab containers created so far (via `create-instance.sh` /
-  `create-instances.sh`) are already suitable REST targets once a plan
-  exists on each.
+- Container storage setup is already automated.
+- Login, password change, and license activation are confirmed-manual —
+  not because of missing research, but because the API genuinely has no
+  operations for them.
+- Pool → index → plan creation is confirmed automatable via REST for
+  everything except a `DISK` pool's actual storage directory, which needs
+  verifying against a real running container before assuming it's a dead
+  end — it's possible the directory gets attached through a different
+  mechanism (e.g. implicit default, or a step that only appears once a
+  pool exists) that doesn't show up in the static spec.
+- Once a plan/index/pool exist, archive-job submission, monitoring, and
+  archived-status checking are all provably automatable, using exactly the
+  endpoints `p5ArchiveManager` already relies on in production.
+- For demoing **P5 Command Lab**: point it at a lab container's REST port
+  with Basic auth, same as any other client — the lab containers created so
+  far (via `create-instance.sh` / `create-instances.sh`) are already
+  suitable targets once a plan exists on each, and that plan/pool/index
+  setup is now a scriptable step rather than a GUI-only one (modulo the
+  disk-path gap above).
+
+## Suggested next step
+
+Test `POST /general/pools` with `mediatype: "DISK"` against one real
+running lab container and inspect the response and the resulting pool's
+fields (and `GET /general/pools/{poolID}` afterward) to find out whether a
+path/directory appears, gets defaulted, or needs a separate call this
+static spec doesn't name. That single test resolves the last open question
+directly, rather than reasoning about it further from the spec alone.
