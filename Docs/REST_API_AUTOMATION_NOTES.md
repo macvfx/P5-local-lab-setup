@@ -74,16 +74,16 @@ object itself exists. Confirmed by testing directly against a live
 `p5-lab-03` container (P5 8.0.6), not inferred from the schema alone:
 
 ```
-$ curl -u admin:admin -X POST "http://127.0.0.1:20002/rest/v1/general/pools" \
+$ curl -u <username>:<password> -X POST "http://<host>:<rest-port>/rest/v1/general/pools" \
     -H "name: TEST-DISK-POOL-DELETEME" -H "Content-Type: application/json" \
     -d '{"usage":"Archive","mediatype":"DISK"}'
 {"ID": "TEST-DISK-POOL-DELETEME", "links": [...]}
 
-$ curl -u admin:admin "http://127.0.0.1:20002/rest/v1/general/pools/TEST-DISK-POOL-DELETEME"
+$ curl -u <username>:<password> "http://<host>:<rest-port>/rest/v1/general/pools/TEST-DISK-POOL-DELETEME"
 {"mediatype": "DISK", "usage": "Archive", "usedsize": 0, "totalsize": 0,
  "enabled": true, "drivecount": 1}
 
-$ curl -u admin:admin ".../pools/TEST-DISK-POOL-DELETEME/volumes"
+$ curl -u <username>:<password> ".../pools/TEST-DISK-POOL-DELETEME/volumes"
 []  (empty)
 ```
 
