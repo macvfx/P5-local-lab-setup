@@ -24,7 +24,17 @@ if [ -e "$WORK_DIR" ]; then
 fi
 mkdir -p "$WORK_DIR"
 
-FILENAME=$(basename "$URL" | sed 's/[?#].*//')
+case "$URL" in
+    *awdl=*)
+        # Archiware's download-page link style has no path-based filename;
+        # the real filename is the value of the awdl query parameter, e.g.
+        # https://www.archiware.com/?awdl=Linux_Docker_awspst748.zip&awpf=synology
+        FILENAME=$(printf '%s\n' "$URL" | sed -n 's/.*awdl=\([^&]*\).*/\1/p')
+        ;;
+    *)
+        FILENAME=$(basename "$URL" | sed 's/[?#].*//')
+        ;;
+esac
 if [ -z "$FILENAME" ]; then
     echo "Could not derive a filename from $URL." >&2
     exit 1
