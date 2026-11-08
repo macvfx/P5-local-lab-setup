@@ -1,10 +1,14 @@
 #!/bin/sh
 
 set -eu
+# shellcheck source=versions-common.sh
+. "$(dirname -- "$0")/versions-common.sh"
 
 DOWNLOAD_PAGE="https://www.archiware.com/download-p5/"
-PINNED_VERSION="8.0.6"
-PINNED_PACKAGE="Linux_Docker_awspst806.zip"
+
+resolve_p5_version "${1:-}"
+PINNED_VERSION="$P5_VERSION"
+PINNED_PACKAGE="${P5_PACKAGE_FILENAME:-}"
 
 PAGE=$(curl --fail --silent --show-error --location "$DOWNLOAD_PAGE")
 
@@ -25,13 +29,19 @@ CURRENT_URL="https://www.archiware.com/?awdl=$CURRENT_PACKAGE&awpf=synology"
 echo "Official P5 download page: $DOWNLOAD_PAGE"
 echo "Current P5 release shown there: $CURRENT_VERSION"
 echo "Current Linux Docker package: $CURRENT_URL"
-echo "Tested lab version: $PINNED_VERSION"
-echo "Tested vendor package: https://www.archiware.com/?awdl=$PINNED_PACKAGE&awpf=synology"
+echo "Pinned lab version checked: $PINNED_VERSION"
+if [ -n "$PINNED_PACKAGE" ]; then
+    echo "Pinned vendor package: https://www.archiware.com/?awdl=$PINNED_PACKAGE&awpf=synology"
+fi
 
 if [ "$CURRENT_VERSION" = "$PINNED_VERSION" ] && \
-   [ "$CURRENT_PACKAGE" = "$PINNED_PACKAGE" ]; then
-    echo "Status: the current vendor download matches this lab's tested pin."
+   { [ -z "$PINNED_PACKAGE" ] || [ "$CURRENT_PACKAGE" = "$PINNED_PACKAGE" ]; }; then
+    echo "Status: the current vendor download matches versions/$PINNED_VERSION.env."
 else
-    echo "Status: Archiware offers a different release than this lab's tested pin."
-    echo "Do not silently substitute it. Update the pin, digest, image tag, docs, and acceptance evidence together."
+    echo "Status: Archiware now advertises a different release than versions/$PINNED_VERSION.env."
+    echo "Do not silently substitute it. Pin the new release with:"
+    echo "  ./scripts/add-p5-version.sh $CURRENT_VERSION $CURRENT_URL"
+    echo "Keep this pin (versions/$PINNED_VERSION.env) and its built image around"
+    echo "for regression testing; only update versions/CURRENT once the new"
+    echo "pin is downloaded, verified, and built."
 fi
