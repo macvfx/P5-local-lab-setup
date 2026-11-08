@@ -238,10 +238,10 @@ than storage private to one guest. Two ways to do this, neither verified
 yet:
 
 - **Host-shared folder via Tart's directory-sharing feature.** Tart's own
-  GitHub README does not document the exact flag, and `tart.run` (where the
-  full docs live) was not reachable from the session that wrote this
-  document. Check `tart run --help` directly for the current directory-share
-  flag and confirm how the guest mounts it before relying on it.
+  GitHub README does not document the exact flag; the full docs live at
+  `tart.run`. Check `tart run --help` directly for the current
+  directory-share flag and confirm how the guest mounts it before relying
+  on it.
 - **A real shared volume on the LAN** (e.g. a folder on the controller Mac
   or a NAS target), mounted independently inside each guest over SMB/AFP,
   once bridged networking is working. This is closer to how P5 is actually
@@ -271,6 +271,13 @@ clone itself writes, so this cycle is cheap to repeat.
 
 ## Next steps, not yet done
 
+- **Backlogged: bridged networking on wired Ethernet.** `tart run --net-bridged=en0`
+  was deferred specifically because the VM host was still on Wi-Fi, where
+  bridged mode has a documented ARP/DHCP reliability issue. Confirm the Mac
+  mini's active interface name once it's wired (`networksetup -listallhardwareports`),
+  then retry bridged mode and check `tart ip` returns a real LAN address, not
+  a `169.254.x.x` self-assigned one, before relying on it to reach another
+  VM from the controller or laptop.
 - Wrap the clone/test/delete cycle in a script once P5 installation and the
   milestone's REST/CLI checks are defined for a Tart guest.
 - Add Packer only after both golden images have booted cleanly and networking
