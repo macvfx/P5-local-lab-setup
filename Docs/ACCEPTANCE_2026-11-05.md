@@ -55,6 +55,16 @@ At the time of the test, P5 used about 231 MB of its 4 GiB memory limit. A
 separate bounded backing store is still required for deterministic capacity and
 disk-full tests.
 
+## Addendum: two simultaneous P5 instances (2026-11-08)
+
+- PASS - `p5-lab-02` (REST `20001`, CLI `29002`) created alongside the
+  existing `p5-lab-01` with `scripts/create-instance.sh`, reusing the same
+  `p5-lab:8.0.6` image. `scripts/smoke-test.sh` passed for `p5-lab-02`.
+- Observation - ContainerManager plus both running P5 containers together
+  used under 3GB of memory, confirming the container path's lightweight
+  footprint relative to a macOS VM guest (4GB+ each). Exact host inventory
+  intentionally omitted, per this project's private-hardware boundary.
+
 ## Not yet accepted
 
 - Manual P5 sign-in and password change.
@@ -64,6 +74,5 @@ disk-full tests.
   displayed host ID.
 - Creation of Archive indexes, plans, pools, or disk volumes.
 - Archive and restore of fixture data.
-- Two simultaneous P5 instances.
 - Reset/delete/recreate workflow.
 - Physical tape or changer access.
