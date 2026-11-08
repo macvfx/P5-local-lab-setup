@@ -2,10 +2,8 @@
 
 set -eu
 
-# shellcheck disable=SC2034
-P5_LAB_ROOT=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
-# shellcheck disable=SC2034
-P5_IMAGE_TAG="p5-lab:8.0.6"
+# shellcheck source=versions-common.sh
+. "$(dirname -- "$0")/versions-common.sh"
 
 if [ -n "${P5_CONTAINER_BIN:-}" ]; then
     # shellcheck disable=SC2034

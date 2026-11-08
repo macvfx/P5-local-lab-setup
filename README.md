@@ -354,6 +354,71 @@ implemented; do the per-instance local-folder setup first and come back to
 shared storage as its own test once Archive configuration is working on at
 least one instance.
 
+## Multiple P5 versions
+
+Every pinned P5 version lives as a small file under `versions/<version>.env`
+(vendor source URL, vendor package filename, expected size, and a checksum),
+plus `versions/CURRENT`, which names which pin `scripts/download-vendor-image.sh`,
+`scripts/build-image.sh`, and `scripts/create-instance.sh` use by default
+when no version is given explicitly. Every one of those scripts also takes
+an explicit version as an extra argument to work with a non-current pin
+instead.
+
+### See what's pinned
+
+```sh
+./scripts/list-p5-versions.sh
+```
+
+Reports each pinned version, whether it's the current default, and whether
+its vendor tar is already downloaded locally.
+
+### Pin a new or historical version from a URL
+
+```sh
+./scripts/add-p5-version.sh <version> <url> [image-tag]
+```
+
+Downloads the given URL (a `.tar` or a `.zip` containing one, matching
+either the direct S3-style link this project already pins for 8.0.6 or the
+`?awdl=...` package link from Archiware's download page or its Version
+Archive for older major lines), computes its size and SHA-256, and writes
+`versions/<version>.env`. It refuses to overwrite an existing pin. It does
+**not** change `versions/CURRENT` — build and use the new pin explicitly
+until you decide to make it the default:
+
+```sh
+./scripts/build-image.sh <version>
+./scripts/create-instance.sh <name> <rest-port> <cli-port> <version>
+```
+
+For a historical major-version-line package (for example, a `7.4.8` Linux
+Docker link from Archiware's Version Archive), the checksum this script
+records is **observed from that one download, not vendor-published** —
+Archiware does not publish per-patch checksums the way this project's own
+8.0.6 pin has one confirmed against the vendor's S3 ETag. Treat an older
+pin's integrity guarantee as weaker than the current one's.
+
+### When Archiware ships a new version
+
+```sh
+./scripts/check-current-p5-download.sh
+```
+
+Compares the live download page against whichever version `versions/CURRENT`
+names, and prints the `add-p5-version.sh` command to pin the new release if
+they differ. Keep the old pin's `.env` file, vendor tar, and built image
+around after doing this — the lab is explicitly designed to run multiple
+pinned versions side by side for regression testing, not to replace one with
+the next. Only update `versions/CURRENT` once the new pin is downloaded,
+verified, and built.
+
+Archiware's own retention of old patch-level downloads is inconsistent (the
+current download page has a stray link mismatch between an old checksum and
+a newer installer for one platform row, observed firsthand while researching
+this), so don't assume a version can be pinned retroactively after the fact
+— pin the outgoing version at the moment a new one ships, not later.
+
 ## Vendor source
 
 Start at Archiware's canonical
@@ -366,7 +431,8 @@ current link advertised by that page without downloading it:
 ```
 
 This project deliberately does not follow the newest P5 release automatically.
-Its accepted and reproducible pin remains Archiware P5 8.0.6:
+Its accepted and reproducible pin remains Archiware P5 8.0.6, recorded in
+[`versions/8.0.6.env`](versions/8.0.6.env):
 
 - Vendor package link used for discovery:
   `https://www.archiware.com/?awdl=Linux_Docker_awspst806.zip&awpf=synology`
@@ -379,12 +445,10 @@ The download script uses HTTPS and refuses an unexpected size or digest. These
 values identify the file observed on 2026-11-05; they are not a substitute for
 a vendor-published cryptographic checksum.
 
-When Archiware publishes a newer P5 version, treat it as a new lab target. Test
-the vendor package first, then update the source URL, expected size and digest,
-image tag, Dockerfile label, Compose/ContainerManager references, documentation,
-and dated acceptance record together. Keeping the old pin available is useful
-when P5 Command Lab or another client needs regression testing against more
-than one server version.
+When Archiware publishes a newer P5 version, see
+[Multiple P5 versions](#multiple-p5-versions) above — pin it alongside 8.0.6
+rather than replacing it, since this project treats more than one pinned
+version as a normal, supported state, not a migration to perform.
 
 ## Sharing the lab project
 
