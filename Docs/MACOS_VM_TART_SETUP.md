@@ -209,6 +209,48 @@ ssh <username>@<ip-from-above>
 
 `tart ip` does not depend on the guest agent, only `tart exec` does.
 
+## 5. Storage for Archive testing (plan, not yet run)
+
+Testing notes before cloning a second P5 VM, so storage choices stay
+consistent across clones rather than improvised per instance.
+
+### Local folders (default; do this first)
+
+Per the research doc's own guidance, Archive storage for basic testing does
+not need a dedicated virtual disk — a plain owned directory inside the guest
+is enough:
+
+```sh
+mkdir -p ~/P5-Test/Source ~/P5-Test/Archive ~/P5-Test/Restored
+```
+
+Use `~/P5-Test/Archive` as the target when creating the `TEST-POOL` disk
+pool in P5, `~/P5-Test/Source` as the plan's source, and
+`~/P5-Test/Restored` as the restore destination. Do this identically on
+every clone (`p5-test-clone-01`, `p5-test-clone-02`, ...) so results are
+comparable across clones and across the macos15/macos26 golden images.
+
+### Shared storage across VMs (to test)
+
+Worth testing separately: pointing two VM clones' Archive storage at the
+*same* location, to exercise P5 against shared/network-style storage rather
+than storage private to one guest. Two ways to do this, neither verified
+yet:
+
+- **Host-shared folder via Tart's directory-sharing feature.** Tart's own
+  GitHub README does not document the exact flag, and `tart.run` (where the
+  full docs live) was not reachable from the session that wrote this
+  document. Check `tart run --help` directly for the current directory-share
+  flag and confirm how the guest mounts it before relying on it.
+- **A real shared volume on the LAN** (e.g. a folder on the controller Mac
+  or a NAS target), mounted independently inside each guest over SMB/AFP,
+  once bridged networking is working. This is closer to how P5 is actually
+  used in production and worth testing once Path C's bridged-networking
+  work (see the known limitations above) is confirmed on wired Ethernet.
+
+Don't block the second VM's P5 install on this — do the local-folder setup
+first, and come back to shared storage as its own test once two VMs are up.
+
 ## 4. Disposable test clone lifecycle
 
 Not yet wrapped in a script, since this is where P5 installation and the

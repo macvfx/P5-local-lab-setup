@@ -326,6 +326,34 @@ real growth is limited by free storage on the Mac. Use a bounded sparse image
 or another explicitly limited backing store when a test needs deterministic
 "disk full" behaviour.
 
+## Storage for Archive testing (plan, not yet run)
+
+Testing notes before configuring Archive plans on multiple instances, so
+storage choices stay consistent across `p5-lab-01`, `p5-lab-02`, and later
+instances.
+
+### Local folders (default; already provided)
+
+Each instance's `archive/`, `source/`, and `restore/` folders (above) are
+already isolated per instance and bind-mounted individually — no extra setup
+needed. Use these directly as the Disk Pool target, plan source, and restore
+destination for Archive configuration on each instance, same fictional
+naming as the Tart path (`Example-Archive` / `Example-Plan` / `TEST-POOL`),
+so results are directly comparable between the container and VM paths.
+
+### Shared storage across instances (to test)
+
+Worth testing separately: pointing two running instances at the *same* host
+folder, to exercise P5 against shared storage rather than storage private to
+one container. `create-instance.sh` hard-codes each instance's mount to its
+own `instances/<name>` folder, so this isn't available through the script as
+written — it would need either a manual `container run` invocation with an
+extra `--volume <shared-host-path>:<container-path>` added, or a small
+script change to accept an optional shared-mount argument. Not yet
+implemented; do the per-instance local-folder setup first and come back to
+shared storage as its own test once Archive configuration is working on at
+least one instance.
+
 ## Vendor source
 
 Start at Archiware's canonical
