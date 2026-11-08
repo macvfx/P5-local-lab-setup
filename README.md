@@ -392,32 +392,53 @@ until you decide to make it the default:
 ./scripts/create-instance.sh <name> <rest-port> <cli-port> <version>
 ```
 
-For a historical major-version-line package (for example, a `7.4.8` Linux
-Docker link from Archiware's Version Archive), the checksum this script
-records is **observed from that one download, not vendor-published** —
-Archiware does not publish per-patch checksums the way this project's own
-8.0.6 pin has one confirmed against the vendor's S3 ETag. Treat an older
-pin's integrity guarantee as weaker than the current one's.
+If the checksum this script records came from a vendor-published value, note
+that separately in the `.env` file — by default it's **observed from that
+one download, not vendor-published**, since Archiware does not publish
+per-patch checksums the way this project's own 8.0.6 pin has one confirmed
+against the vendor's S3 ETag.
 
-### When Archiware ships a new version
+### Policy: pin forward, don't try to backfill history
+
+This project's working policy is to pin each P5 version **at the moment it
+becomes current**, and never rely on being able to recover an older Docker
+package later. This isn't a theoretical caution — it's confirmed. Archiware's
+Version Archive page links to a `7.4.8` Linux Docker package, but fetching it
+(both through the archived link and by resolving its real URL in a browser)
+returned `AccessDenied` from the backing S3 object: the link exists, the file
+behind it does not. Combined with a separate stray checksum/installer
+mismatch already observed on the current download page, treat Archiware's
+retention of old Docker packages as unreliable in general, not just in this
+one case.
+
+Practical effect: `scripts/add-p5-version.sh` still works and still accepts
+a URL or a local file for whatever a historical link happens to resolve to,
+but don't plan around successfully backfilling a version you didn't already
+pin when it was current. The real workflow is:
 
 ```sh
 ./scripts/check-current-p5-download.sh
 ```
 
-Compares the live download page against whichever version `versions/CURRENT`
-names, and prints the `add-p5-version.sh` command to pin the new release if
-they differ. Keep the old pin's `.env` file, vendor tar, and built image
-around after doing this — the lab is explicitly designed to run multiple
-pinned versions side by side for regression testing, not to replace one with
-the next. Only update `versions/CURRENT` once the new pin is downloaded,
-verified, and built.
+Run this periodically. It compares the live download page against whichever
+version `versions/CURRENT` names, and prints the `add-p5-version.sh` command
+to pin the new release the moment they differ. Keep the old pin's `.env`
+file, vendor tar, and built image around afterward — the lab is explicitly
+designed to run multiple pinned versions side by side for regression
+testing, not to replace one with the next. Only update `versions/CURRENT`
+once the new pin is downloaded, verified, and built.
 
-Archiware's own retention of old patch-level downloads is inconsistent (the
-current download page has a stray link mismatch between an old checksum and
-a newer installer for one platform row, observed firsthand while researching
-this), so don't assume a version can be pinned retroactively after the fact
-— pin the outgoing version at the moment a new one ships, not later.
+## Backlog
+
+- **Regular Linux installer instead of the Docker-specific package.**
+  Archiware's standard RPM/DEB-style Linux installer may be retained more
+  reliably than the Docker-specific export (worth checking when picked up).
+  This would need a real base-OS `Dockerfile` (`FROM ubuntu:22.04` or
+  similar, installer run during the build) alongside the current
+  `FROM scratch` + root-filesystem-`ADD` one, not a replacement for it — the
+  two packaging types would coexist. All current and historical builds seen
+  so far are Intel/AMD64 only, so this doesn't add a new architecture to
+  support, just a second packaging path. Not started.
 
 ## Vendor source
 
