@@ -1,5 +1,11 @@
 #!/bin/sh
 
+# Reports whether the version in versions/CURRENT (or an explicit version
+# argument) still matches what Archiware's download page currently
+# advertises. Exit codes: 0 = matches (no drift), 1 = a newer/different
+# version is now advertised, 2 = the page could not be parsed (inspect it
+# manually; this is not the same as drift).
+
 set -eu
 # shellcheck source=versions-common.sh
 . "$(dirname -- "$0")/versions-common.sh"
@@ -21,7 +27,7 @@ if [ -z "$CURRENT_VERSION" ] || [ -z "$CURRENT_PACKAGE" ]; then
     echo "Could not find the current P5 version and Linux Docker download on:" >&2
     echo "$DOWNLOAD_PAGE" >&2
     echo "Archiware may have changed the page; inspect it manually before updating." >&2
-    exit 1
+    exit 2
 fi
 
 CURRENT_URL="https://www.archiware.com/?awdl=$CURRENT_PACKAGE&awpf=synology"
@@ -37,6 +43,7 @@ fi
 if [ "$CURRENT_VERSION" = "$PINNED_VERSION" ] && \
    { [ -z "$PINNED_PACKAGE" ] || [ "$CURRENT_PACKAGE" = "$PINNED_PACKAGE" ]; }; then
     echo "Status: the current vendor download matches versions/$PINNED_VERSION.env."
+    exit 0
 else
     echo "Status: Archiware now advertises a different release than versions/$PINNED_VERSION.env."
     echo "Do not silently substitute it. Pin the new release with:"
@@ -44,4 +51,5 @@ else
     echo "Keep this pin (versions/$PINNED_VERSION.env) and its built image around"
     echo "for regression testing; only update versions/CURRENT once the new"
     echo "pin is downloaded, verified, and built."
+    exit 1
 fi
