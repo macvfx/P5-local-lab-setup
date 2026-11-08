@@ -1,9 +1,11 @@
 # P5 REST API automation: what's manual, what's automatable
 
-**Status:** Research notes, not yet implemented. The core question — can
+**Status:** Research notes, not yet automated. The core question — can
 archive indexes, pools, and plans be *created* via REST, not just used once
-someone sets them up by hand? — is now answered from Archiware's own
-official OpenAPI spec, not inferred or guessed.
+someone sets them up by hand? — is answered from Archiware's own official
+OpenAPI spec, and the one remaining piece (DISK pool storage) is confirmed
+by a live test against a real running container, not just read from the
+spec.
 
 Sources, both first-party:
 
@@ -58,19 +60,47 @@ index → plan (the plan references the other two by name), matching exactly
 the roadmap's fictional naming (`TEST-POOL` / `Example-Archive` /
 `Example-Plan`).
 
-## The one real remaining gap: a DISK pool's actual storage location
+## Confirmed, empirically: a DISK pool's storage can't be attached via REST
 
-`PoolCreate`'s body schema (`usage`, `mediatype`, `blocksize`, `drivecount`)
-has **no path or directory field** — confirmed by reading the full schema,
-not just its summary. There's also no `POST /general/volumes` to create a
-new volume from scratch; the only volume-related write endpoints
-(`PUT`/`POST /general/volumes/{volumeID}`) operate on a volume that already
-exists. This means creating a `DISK`-type pool via REST sets up the pool's
-*parameters*, but associating it with a real filesystem directory — the
-part that actually makes it usable for archiving to local disk — isn't
-visible anywhere in this API surface. That step most likely still needs the
-P5 web GUI (or CLI) once, per pool, until proven otherwise against a real
-server.
+Tested directly against a live `p5-lab-03` container (P5 8.0.6):
+
+```
+$ curl -u admin:admin -X POST "http://127.0.0.1:20002/rest/v1/general/pools" \
+    -H "name: TEST-DISK-POOL-DELETEME" -H "Content-Type: application/json" \
+    -d '{"usage":"Archive","mediatype":"DISK"}'
+{"ID": "TEST-DISK-POOL-DELETEME", "links": [...]}
+
+$ curl -u admin:admin "http://127.0.0.1:20002/rest/v1/general/pools/TEST-DISK-POOL-DELETEME"
+{"mediatype": "DISK", "usage": "Archive", "usedsize": 0, "totalsize": 0,
+ "enabled": true, "drivecount": 1}
+
+$ curl -u admin:admin ".../pools/TEST-DISK-POOL-DELETEME/volumes"
+[]  (empty)
+```
+
+The pool's `ID` is literally the `name` you gave it, not a separate opaque
+identifier. `totalsize: 0` and an empty volume list confirm this isn't a
+display quirk — the pool genuinely has zero storage attached, no path
+field anywhere in its representation, and `PoolCreate`'s body schema
+(`usage`, `mediatype`, `blocksize`, `drivecount`) has no path/directory
+field to begin with. Combined with there being no `POST /general/volumes`
+to create a volume from scratch (confirmed earlier from the static spec),
+this settles it: **creating a `DISK` pool via REST registers the pool
+object, but does not and cannot make it usable for archiving.** Attaching
+a real filesystem directory to it needs the P5 web GUI (or possibly the
+CLI) — this is not a gap in the research, it's how the API actually works.
+
+One side effect worth noting: that test pool now exists for real on
+`p5-lab-03` and can't be removed via REST (no `DELETE /general/pools/...`
+in the spec). Either leave it — it's harmless and costs nothing — or
+`destroy-instance.sh p5-lab-03 --confirm` and recreate it if a clean state
+matters for that instance.
+
+The manual step this leaves isn't "set up storage from nothing," though —
+every container already has `/host_dir/archive` bind-mounted and ready,
+from `prepare-instance-folder.sh`/`create-instance.sh`. The one manual step
+per pool is pointing the DISK pool's volume at that already-existing path
+in the P5 GUI, not creating storage itself.
 
 ## Confirmed: license activation and user/password management are not REST operations at all
 
@@ -95,7 +125,8 @@ server.
 | First login with the default admin account | **Manual — confirmed, not a REST gap** | No user/session-login endpoint exists in the spec at all. |
 | Changing the admin password | **Manual — confirmed, not a REST gap** | Same; no endpoint. |
 | Demo/trial license activation | **Manual — confirmed, not a REST gap, and project policy either way** | `license` is read-only in the spec. |
-| Creating a media pool | **Automatable for parameters; manual for storage path** | `POST /general/pools` sets `usage`/`mediatype`/`blocksize`/`drivecount`; attaching a real disk directory isn't visible in this API. |
+| Creating a media pool's parameters | **Automatable, confirmed** | `POST /general/pools` — tested live, works. |
+| Attaching real disk storage to that pool | **Manual — confirmed empirically, not a research gap** | Tested live: the created pool has `totalsize: 0` and an empty volume list; no REST path exists to attach a directory or create a volume. GUI/CLI only. |
 | Creating an archive index | **Automatable, confirmed** | `POST /archive/indexes` — `name` + `description`. |
 | Creating an archive plan | **Automatable, confirmed** | `POST /archive/plans` — references the pool and index by name. |
 | Creating metadata keys on an index | **Automatable, confirmed** | `POST /archive/indexes/{index}/keys`. |
@@ -136,12 +167,12 @@ against names on disk.
 - Login, password change, and license activation are confirmed-manual —
   not because of missing research, but because the API genuinely has no
   operations for them.
-- Pool → index → plan creation is confirmed automatable via REST for
-  everything except a `DISK` pool's actual storage directory, which needs
-  verifying against a real running container before assuming it's a dead
-  end — it's possible the directory gets attached through a different
-  mechanism (e.g. implicit default, or a step that only appears once a
-  pool exists) that doesn't show up in the static spec.
+- Pool → index → plan creation is confirmed automatable via REST, except
+  attaching a `DISK` pool's actual storage directory — confirmed manual by
+  live test against a real container, not just absent from the static
+  spec. That one step points the pool at a path (e.g. `/host_dir/archive`)
+  that the container tooling already provisions; it isn't "set up storage
+  from nothing."
 - Once a plan/index/pool exist, archive-job submission, monitoring, and
   archived-status checking are all provably automatable, using exactly the
   endpoints `p5ArchiveManager` already relies on in production.
@@ -151,12 +182,3 @@ against names on disk.
   suitable targets once a plan exists on each, and that plan/pool/index
   setup is now a scriptable step rather than a GUI-only one (modulo the
   disk-path gap above).
-
-## Suggested next step
-
-Test `POST /general/pools` with `mediatype: "DISK"` against one real
-running lab container and inspect the response and the resulting pool's
-fields (and `GET /general/pools/{poolID}` afterward) to find out whether a
-path/directory appears, gets defaulted, or needs a separate call this
-static spec doesn't name. That single test resolves the last open question
-directly, rather than reasoning about it further from the spec alone.
