@@ -66,14 +66,18 @@ case "$MEDIA_TARGET" in
         ;;
 esac
 
-INSTANCE_ROOT="$P5_LAB_ROOT/instances/$INSTANCE_NAME"
-"$P5_LAB_ROOT/scripts/prepare-instance-folder.sh" "$INSTANCE_NAME" >/dev/null
-
 if "$CONTAINER_BIN" inspect "$INSTANCE_NAME" >/dev/null 2>&1; then
     echo "Container $INSTANCE_NAME already exists; refusing to replace it." >&2
     echo "A mount cannot be added to an existing container." >&2
     exit 1
 fi
+
+# Checked before the instance folder is prepared, so a port clash leaves
+# nothing behind for scripts/create-instances.sh to count.
+require_free_ports "$REST_HOST_PORT" "$CLI_HOST_PORT"
+
+INSTANCE_ROOT="$P5_LAB_ROOT/instances/$INSTANCE_NAME"
+"$P5_LAB_ROOT/scripts/prepare-instance-folder.sh" "$INSTANCE_NAME" >/dev/null
 
 echo "Creating $INSTANCE_NAME with REST on 127.0.0.1:$REST_HOST_PORT and CLI/awsock on 127.0.0.1:$CLI_HOST_PORT"
 echo "Read-only source media: $MEDIA_ROOT -> $MEDIA_TARGET"

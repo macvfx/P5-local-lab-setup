@@ -68,6 +68,7 @@ echo "Highest existing $NAME_PREFIX-NN instance: $HIGHEST"
 
 SMOKE_TEST_COMMANDS=""
 CREATED=0
+SKIPPED=0
 OFFSET=1
 while [ "$CREATED" -lt "$COUNT" ]; do
     NEXT=$((HIGHEST + OFFSET))
@@ -75,6 +76,20 @@ while [ "$CREATED" -lt "$COUNT" ]; do
     INSTANCE_NAME="$NAME_PREFIX-$NEXT_PADDED"
     REST_PORT=$((REST_BASE + NEXT - 1))
     CLI_PORT=$((CLI_BASE + NEXT - 1))
+
+    # The ports follow the instance number, but something outside this
+    # numbering (a hand-made container, a ContainerManager stack, another
+    # app) may already hold them. Skip that number rather than fail midway.
+    if port_in_use "$REST_PORT" || port_in_use "$CLI_PORT"; then
+        SKIPPED=$((SKIPPED + 1))
+        if [ "$SKIPPED" -gt 20 ]; then
+            echo "More than 20 instance numbers had a port in use; stopping." >&2
+            exit 1
+        fi
+        echo "Skipping $INSTANCE_NAME: host port $REST_PORT or $CLI_PORT is already in use."
+        OFFSET=$((OFFSET + 1))
+        continue
+    fi
 
     echo "Creating instance $((CREATED + 1)) of $COUNT: $INSTANCE_NAME (REST $REST_PORT, CLI $CLI_PORT)"
     if [ -n "$MEDIA_ROOT" ]; then
