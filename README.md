@@ -309,6 +309,14 @@ pinned version instead:
 ./scripts/create-instances.sh 2 8.0.5
 ```
 
+Before creating anything, the create scripts check that both host ports
+are free. `create-instance.sh` and `create-instance-with-media.sh` stop with
+a message naming the busy port. `create-instances.sh` skips an instance
+number whose REST or CLI port is already in use and moves to the next one,
+so names and ports stay paired; this happens when a container outside the
+`<prefix>-NN` numbering, a ContainerManager stack, or another app already
+holds one of the ports.
+
 Each instance is still created one at a time through `create-instance.sh`,
 so the same name-collision guard and per-instance folder setup apply; this
 script only automates picking names and ports.

@@ -50,3 +50,20 @@ validate_distinct_ports() {
     fi
 }
 
+# True when something on this Mac is already listening on 127.0.0.1:<port>.
+# A stopped container does not hold its ports, so this only sees live
+# listeners. Without nc the check is skipped and reports the port as free.
+port_in_use() {
+    command -v nc >/dev/null 2>&1 || return 1
+    nc -z -w 1 127.0.0.1 "$1" >/dev/null 2>&1
+}
+
+require_free_ports() {
+    for CHECK_PORT in "$@"; do
+        if port_in_use "$CHECK_PORT"; then
+            echo "Host port $CHECK_PORT is already in use on 127.0.0.1; nothing was created." >&2
+            echo "Find what holds it with: lsof -nP -iTCP:$CHECK_PORT -sTCP:LISTEN" >&2
+            exit 1
+        fi
+    done
+}
