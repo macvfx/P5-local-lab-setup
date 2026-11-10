@@ -65,3 +65,25 @@ Also operator-reported, on the same host, later the same day.
 
 Not recorded: the names and ports of the instances created, and whether
 `scripts/smoke-test.sh` was run against them.
+
+## Addendum: `--help`, `--next` and stopped-container ports (2026-11-09)
+
+Also operator-reported, on the same host.
+
+- Host state at the time, from `container list --all`: `p5-lab-01`,
+  `p5-lab-04-media`, `p5-lab-06` and `p5-lab-07` running; `p5-lab-02`,
+  `p5-lab-03` and `p5-lab-04` stopped; no `p5-lab-05`.
+- PASS - `container inspect p5-lab-01` reports ports as
+  `"hostPort" : <number>` under `publishedPorts` and the state as
+  `"state" : "running"` under `status`, which are the fields
+  `scripts/common.sh` reads. `container list --all` reports the other state
+  as `stopped`.
+- PASS - `./scripts/create-instance.sh --next` created the next instance
+  with the correct name and ports.
+- PASS - `./scripts/create-instance-with-media.sh <folder> --next` did the
+  same, with the media folder mounted read-only.
+
+Not recorded: the `--help` table as displayed, the names and ports of the
+two instances created, and their smoke-test results. Refusal of explicit
+ports that belong to a stopped container was exercised against a stub
+runtime only.
