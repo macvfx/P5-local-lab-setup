@@ -40,29 +40,8 @@ if [ -n "$MEDIA_ROOT" ] && [ ! -d "$MEDIA_ROOT" ]; then
     exit 2
 fi
 
-REST_BASE=20000
-CLI_BASE=29001
-
-HIGHEST=0
-for DIR in "$P5_LAB_ROOT"/instances/"$NAME_PREFIX"-*; do
-    [ -d "$DIR" ] || continue
-    NAME=$(basename "$DIR")
-    SUFFIX=${NAME#"$NAME_PREFIX"-}
-    case "$SUFFIX" in
-        ''|*[!0-9]*) continue ;;
-    esac
-    # Strip leading zeros before arithmetic: POSIX shell arithmetic treats
-    # a leading-zero numeral as octal, which fails outright on "08"/"09".
-    SUFFIX_TRIMMED=$(printf '%s' "$SUFFIX" | sed 's/^0*//')
-    if [ -z "$SUFFIX_TRIMMED" ]; then
-        SUFFIX_NUM=0
-    else
-        SUFFIX_NUM=$((SUFFIX_TRIMMED))
-    fi
-    if [ "$SUFFIX_NUM" -gt "$HIGHEST" ]; then
-        HIGHEST=$SUFFIX_NUM
-    fi
-done
+highest_instance_number "$NAME_PREFIX"
+HIGHEST=$HIGHEST_INSTANCE
 
 echo "Highest existing $NAME_PREFIX-NN instance: $HIGHEST"
 
@@ -74,19 +53,20 @@ while [ "$CREATED" -lt "$COUNT" ]; do
     NEXT=$((HIGHEST + OFFSET))
     NEXT_PADDED=$(printf '%02d' "$NEXT")
     INSTANCE_NAME="$NAME_PREFIX-$NEXT_PADDED"
-    REST_PORT=$((REST_BASE + NEXT - 1))
-    CLI_PORT=$((CLI_BASE + NEXT - 1))
+    REST_PORT=$((LAB_REST_BASE + NEXT - 1))
+    CLI_PORT=$((LAB_CLI_BASE + NEXT - 1))
 
-    # The ports follow the instance number, but something outside this
-    # numbering (a hand-made container, a ContainerManager stack, another
-    # app) may already hold them. Skip that number rather than fail midway.
-    if port_in_use "$REST_PORT" || port_in_use "$CLI_PORT"; then
+    # The name and ports follow the instance number, but something outside
+    # this numbering (a hand-made container, a ContainerManager stack, a
+    # stopped instance, another app) may already hold them. Skip that number
+    # rather than fail midway.
+    if ! instance_slot_free "$INSTANCE_NAME" "$REST_PORT" "$CLI_PORT"; then
         SKIPPED=$((SKIPPED + 1))
         if [ "$SKIPPED" -gt 20 ]; then
-            echo "More than 20 instance numbers had a port in use; stopping." >&2
+            echo "More than 20 instance numbers were unavailable; stopping." >&2
             exit 1
         fi
-        echo "Skipping $INSTANCE_NAME: host port $REST_PORT or $CLI_PORT is already in use."
+        echo "Skipping $INSTANCE_NAME: $SLOT_REASON."
         OFFSET=$((OFFSET + 1))
         continue
     fi

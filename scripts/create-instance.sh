@@ -4,15 +4,64 @@ set -eu
 # shellcheck source=common.sh
 . "$(dirname -- "$0")/common.sh"
 
-INSTANCE_NAME=${1:-p5-lab-01}
-REST_HOST_PORT=${2:-20000}
-CLI_HOST_PORT=${3:-29001}
+# shellcheck disable=SC2034
+NEXT_HINT_COMMAND="./scripts/create-instance.sh"
+
+print_help() {
+    cat <<HELP
+Usage:
+  $0 [instance-name] [rest-port] [cli-port] [version]
+  $0 --next [version]
+  $0 --help
+
+Creates one P5 Local Lab instance. With no arguments it uses p5-lab-01 on
+REST port 20000 and CLI port 29001.
+
+  --next   Pick the next free p5-lab-NN name and its ports automatically.
+  --help   Show this help, the instances that exist, and the next free
+           name and ports. Creates nothing.
+
+Existing instances:
+HELP
+    print_instances_overview
+    echo
+    print_next_available
+}
+
+VERSION_ARG=""
+case "${1:-}" in
+    -h|--help|help)
+        print_help
+        exit 0
+        ;;
+    --next)
+        if ! suggest_next_instance "$LAB_DEFAULT_PREFIX"; then
+            echo "No free $LAB_DEFAULT_PREFIX-NN name and port pair was found in the next 50 numbers." >&2
+            exit 1
+        fi
+        INSTANCE_NAME=$NEXT_INSTANCE_NAME
+        REST_HOST_PORT=$NEXT_REST_PORT
+        CLI_HOST_PORT=$NEXT_CLI_PORT
+        VERSION_ARG=${2:-}
+        ;;
+    -*)
+        echo "Unknown option: $1. Run $0 --help." >&2
+        exit 2
+        ;;
+    *)
+        INSTANCE_NAME=${1:-p5-lab-01}
+        REST_HOST_PORT=${2:-20000}
+        CLI_HOST_PORT=${3:-29001}
+        VERSION_ARG=${4:-}
+        ;;
+esac
 validate_instance_name "$INSTANCE_NAME"
 validate_distinct_ports "$REST_HOST_PORT" "$CLI_HOST_PORT"
-resolve_p5_version "${4:-}"
+resolve_p5_version "$VERSION_ARG"
 
 if "$CONTAINER_BIN" inspect "$INSTANCE_NAME" >/dev/null 2>&1; then
     echo "Container $INSTANCE_NAME already exists; refusing to replace it." >&2
+    print_next_available >&2
     exit 1
 fi
 

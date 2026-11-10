@@ -327,6 +327,50 @@ pinned version instead:
 ./scripts/create-instances.sh 2 8.0.5
 ```
 
+### See what exists and what is free next
+
+Both single-instance scripts can show what is already created and suggest
+the next free name and ports, using the same numbering as
+`create-instances.sh`:
+
+```sh
+./scripts/create-instance.sh --help
+./scripts/create-instance-with-media.sh --help
+```
+
+`--help` creates nothing. It prints the usage, then every instance folder
+with its container state and host ports, then the next free command:
+
+```text
+Existing instances:
+INSTANCE                 CONTAINER  HOST PORTS (REST CLI)
+p5-lab-01                running    20000 29001
+p5-lab-02                stopped    20001 29002
+p5-lab-02-media          running    20002 29003
+
+Next available:
+  ./scripts/create-instance.sh p5-lab-04 20003 29004
+Or let the script choose them:
+  ./scripts/create-instance.sh --next
+```
+
+`--next` creates the instance with that name and those ports without
+typing them:
+
+```sh
+./scripts/create-instance.sh --next
+./scripts/create-instance-with-media.sh /path/to/media --next
+```
+
+A number is passed over when its instance folder or container name exists,
+when one of its ports is listening, or when one of its ports belongs to an
+existing lab container that is stopped. The same "Next available" lines are
+printed whenever a create script refuses a name or port.
+
+The container state and ports come from the runtime's `inspect` output. A
+container shown with `unknown` ports is one whose ports could not be read;
+its ports are then not protected while it is stopped.
+
 ### Port checks before creation
 
 Before creating anything, the create scripts check that both host ports
@@ -335,9 +379,9 @@ are free:
 - `create-instance.sh` and `create-instance-with-media.sh` stop with a
   message naming the busy port and an `lsof` command to find what holds it.
   No instance folder or container is created.
-- `create-instances.sh` skips an instance number whose REST or CLI port is
-  already in use and moves to the next one, so names and ports stay paired.
-  It stops after 20 skipped numbers.
+- `create-instances.sh` skips an instance number whose name is taken or
+  whose REST or CLI port is unavailable and moves to the next one, so names
+  and ports stay paired. It stops after 20 skipped numbers.
 
 A port is typically busy because of a running container outside the
 `<prefix>-NN` numbering (for example `p5-lab-04-media`), a ContainerManager
@@ -350,9 +394,9 @@ Skipping p5-lab-05: host port 20004 or 29005 is already in use.
 Creating instance 1 of 2: p5-lab-06 (REST 20005, CLI 29006)
 ```
 
-The check sees live listeners only. A stopped container does not hold its
-ports, so its numbers can be handed to a new instance; the two then cannot
-run at the same time. To avoid gaps and clashes, give one-off instances a
+A stopped container does not listen on its ports, so the scripts also read
+the ports of every existing lab container and refuse or skip those too. To
+avoid gaps and clashes, give one-off instances a
 plain `<prefix>-NN` name, or a different prefix with ports well away from
 the `20000` and `29001` ranges. The check uses `nc`, which macOS includes.
 
@@ -428,8 +472,8 @@ All scripts live in `scripts/` and are run from the project directory.
 | `check-current-p5-download.sh` | Compares the pinned P5 version with Archiware's download page. Downloads nothing. |
 | `download-vendor-image.sh [version]` | Downloads the pinned P5 root filesystem and verifies its size and digest. |
 | `build-image.sh [version]` | Builds the local `p5-lab:<version>` image. |
-| `create-instance.sh [name] [rest-port] [cli-port] [version]` | Creates one instance with its own `/host_dir` folder. Checks ports first. |
-| `create-instance-with-media.sh <media-folder> [name] [rest-port] [cli-port] [version]` | As above, plus a host media folder mounted read-only at `/media`. Checks ports first, then verifies the mount is visible and rejects writes. |
+| `create-instance.sh [name] [rest-port] [cli-port] [version]` | Creates one instance with its own `/host_dir` folder. Checks ports first. `--help` lists existing instances and the next free name and ports; `--next` uses them. |
+| `create-instance-with-media.sh <media-folder> [name] [rest-port] [cli-port] [version]` | As above, plus a host media folder mounted read-only at `/media`. Checks ports first, then verifies the mount is visible and rejects writes. Also takes `--help`, and `--next` after the media folder. |
 | `create-instances.sh <count> [version] [name-prefix]` | Creates several numbered instances. Skips numbers whose ports are busy. Set `P5_LAB_MEDIA` to mount one media folder read-only in all of them. |
 | `smoke-test.sh [name] [rest-port] [cli-port]` | Checks architecture, the `/host_dir` mount, the P5 CLI, the login page, and the CLI port. |
 | `status.sh [name]` | Shows container details, P5 version, filesystems, and resource use. |
