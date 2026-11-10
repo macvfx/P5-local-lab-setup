@@ -51,6 +51,10 @@ Docker Desktop on Apple silicon remains experimental and untested.
 
 - The P5 REST and CLI ports bind to `127.0.0.1`, not every network interface.
 - Only an instance-specific directory is mounted at `/host_dir`.
+- An optional shared source-media folder is mounted read-only, so no P5 job
+  can change or delete the originals.
+- The create scripts check that both host ports are free before creating
+  anything, and stop or skip rather than leave a half-made instance.
 - The Mac's root filesystem is never mounted into P5.
 - Vendor binaries are downloaded from Archiware and are not committed here.
 - The scripts operate only on explicitly named instances.
@@ -168,6 +172,13 @@ Choose either the CLI workflow or ContainerManager.
 ./scripts/status.sh p5-lab-01
 ```
 
+To give the instance a folder of real source media as well, mounted
+read-only, use `create-instance-with-media.sh` in place of the first command;
+see
+[Creating an instance with read-only source media](#creating-an-instance-with-read-only-source-media).
+A mount has to be chosen when the instance is created; it cannot be added
+later.
+
 #### ContainerManager workflow
 
 1. Prepare the dedicated folder:
@@ -242,6 +253,13 @@ Run each step from this directory:
 ./scripts/status.sh p5-lab-01
 ```
 
+To start with a read-only folder of source media, replace the
+`create-instance.sh` line with:
+
+```sh
+./scripts/create-instance-with-media.sh /path/to/media p5-lab-01 20000 29001
+```
+
 Then open <http://127.0.0.1:20000/login>. The unlicensed server is sufficient
 for initial P5 Command Lab REST and CLI tests. Do not clone or commit an
 activated P5 installation: Archiware licensing uses a host identity.
@@ -309,13 +327,34 @@ pinned version instead:
 ./scripts/create-instances.sh 2 8.0.5
 ```
 
+### Port checks before creation
+
 Before creating anything, the create scripts check that both host ports
-are free. `create-instance.sh` and `create-instance-with-media.sh` stop with
-a message naming the busy port. `create-instances.sh` skips an instance
-number whose REST or CLI port is already in use and moves to the next one,
-so names and ports stay paired; this happens when a container outside the
-`<prefix>-NN` numbering, a ContainerManager stack, or another app already
-holds one of the ports.
+are free:
+
+- `create-instance.sh` and `create-instance-with-media.sh` stop with a
+  message naming the busy port and an `lsof` command to find what holds it.
+  No instance folder or container is created.
+- `create-instances.sh` skips an instance number whose REST or CLI port is
+  already in use and moves to the next one, so names and ports stay paired.
+  It stops after 20 skipped numbers.
+
+A port is typically busy because of a running container outside the
+`<prefix>-NN` numbering (for example `p5-lab-04-media`), a ContainerManager
+stack, or another app. For example, with `p5-lab-01` to `p5-lab-04` present
+and a differently named container holding REST port `20004`:
+
+```text
+Highest existing p5-lab-NN instance: 4
+Skipping p5-lab-05: host port 20004 or 29005 is already in use.
+Creating instance 1 of 2: p5-lab-06 (REST 20005, CLI 29006)
+```
+
+The check sees live listeners only. A stopped container does not hold its
+ports, so its numbers can be handed to a new instance; the two then cannot
+run at the same time. To avoid gaps and clashes, give one-off instances a
+plain `<prefix>-NN` name, or a different prefix with ports well away from
+the `20000` and `29001` ranges. The check uses `nc`, which macOS includes.
 
 Each instance is still created one at a time through `create-instance.sh`,
 so the same name-collision guard and per-instance folder setup apply; this
@@ -362,11 +401,11 @@ P5_LAB_MEDIA=/Volumes/Media/TestFootage ./scripts/create-instances.sh 3
 
 Without `P5_LAB_MEDIA` the batch script behaves exactly as before.
 
-Status: the single-instance script passed an operator-reported run on
-Apple's `container` runtime on 2026-11-09; see
-[`Docs/MEDIA_MOUNT_ACCEPTANCE_2026-11-09.md`](Docs/MEDIA_MOUNT_ACCEPTANCE_2026-11-09.md).
-The `P5_LAB_MEDIA` batch option has been checked against a stub runtime
-only.
+Status: the single-instance script, the `P5_LAB_MEDIA` batch option, and
+the port checks all passed operator-reported runs on Apple's `container`
+runtime on 2026-11-09; see
+[`Docs/MEDIA_MOUNT_ACCEPTANCE_2026-11-09.md`](Docs/MEDIA_MOUNT_ACCEPTANCE_2026-11-09.md)
+for what was and was not covered.
 
 Reset an instance to a fresh P5 server:
 
@@ -379,6 +418,36 @@ The destroy command refuses containers that are not labelled as P5 Local Lab
 resources. It removes the container and its P5 configuration but deliberately
 keeps the instance's bind-mounted source, archive, restore, and export folders.
 
+## Script reference
+
+All scripts live in `scripts/` and are run from the project directory.
+
+| Script | Purpose |
+| --- | --- |
+| `preflight.sh` | Checks the Mac, macOS version, and Apple `container` client/server versions. |
+| `check-current-p5-download.sh` | Compares the pinned P5 version with Archiware's download page. Downloads nothing. |
+| `download-vendor-image.sh [version]` | Downloads the pinned P5 root filesystem and verifies its size and digest. |
+| `build-image.sh [version]` | Builds the local `p5-lab:<version>` image. |
+| `create-instance.sh [name] [rest-port] [cli-port] [version]` | Creates one instance with its own `/host_dir` folder. Checks ports first. |
+| `create-instance-with-media.sh <media-folder> [name] [rest-port] [cli-port] [version]` | As above, plus a host media folder mounted read-only at `/media`. Checks ports first, then verifies the mount is visible and rejects writes. |
+| `create-instances.sh <count> [version] [name-prefix]` | Creates several numbered instances. Skips numbers whose ports are busy. Set `P5_LAB_MEDIA` to mount one media folder read-only in all of them. |
+| `smoke-test.sh [name] [rest-port] [cli-port]` | Checks architecture, the `/host_dir` mount, the P5 CLI, the login page, and the CLI port. |
+| `status.sh [name]` | Shows container details, P5 version, filesystems, and resource use. |
+| `stop-instance.sh` / `start-instance.sh [name]` | Stops or starts an instance, keeping its P5 configuration. |
+| `destroy-instance.sh <name> --confirm` | Deletes a lab container and its P5 configuration; keeps the instance folder. |
+| `prepare-instance-folder.sh [name]` | Creates the `instances/<name>` folder layout without creating a container. |
+| `list-p5-versions.sh` / `add-p5-version.sh` | Lists pinned P5 versions, or pins a new one. |
+| `package-project.sh` | Builds a distributable ZIP of the project without vendor software. |
+| `tart-preflight.sh` / `tart-pull-golden-image.sh` | Path C (macOS guests in Tart) helpers. |
+
+Environment variables:
+
+| Variable | Used by | Effect |
+| --- | --- | --- |
+| `P5_LAB_MEDIA` | `create-instances.sh` | Host media folder to mount read-only in every instance of the batch. |
+| `P5_LAB_MEDIA_TARGET` | `create-instance-with-media.sh` | Container path for the media mount. Default `/media`. |
+| `P5_CONTAINER_BIN` | All Apple-container scripts | Path to the `container` CLI when it is not in the default locations. |
+
 ## ContainerManager
 
 Build the image first with `scripts/build-image.sh`. In ContainerManager choose
@@ -388,6 +457,11 @@ empty instance directory such as `instances/p5-lab-01` for the lab data folder.
 ContainerManager imports Compose-like definitions but is not a complete Docker
 Compose implementation. This project therefore builds the image separately and
 uses a small native `.containerstack` definition for runtime configuration.
+
+The stack template mounts only the instance folder at `/host_dir`. It does
+not add the read-only media mount and does not run the port checks; use the
+CLI scripts for those. ContainerManager can still manage an instance the CLI
+scripts created.
 
 ## Instance folders
 
@@ -404,13 +478,18 @@ instances/p5-lab-01/
 Inside P5 these appear below `/host_dir`. P5's application, configuration,
 logs, and default indexes initially remain in the container's writable layer.
 
+An instance created with `create-instance-with-media.sh` has the same layout
+plus the chosen media folder at `/media`, outside `/host_dir` and read-only.
+Use `/media` as the Archive plan source and keep `archive/` and `restore/`
+as the writable targets.
+
 Apple's runtime presented the writable root as a thin-provisioned 504 GB
 filesystem during acceptance. That is not a reserved 504 GB allocation: its
 real growth is limited by free storage on the Mac. Use a bounded sparse image
 or another explicitly limited backing store when a test needs deterministic
 "disk full" behaviour.
 
-## Storage for Archive testing (plan, not yet run)
+## Storage for Archive testing
 
 Testing notes before configuring Archive plans on multiple instances, so
 storage choices stay consistent across `p5-lab-01`, `p5-lab-02`, and later
@@ -425,18 +504,25 @@ destination for Archive configuration on each instance, same fictional
 naming as the Tart path (`Example-Archive` / `Example-Plan` / `TEST-POOL`),
 so results are directly comparable between the container and VM paths.
 
-### Shared storage across instances (to test)
+### Shared read-only source media across instances
 
-Worth testing separately: pointing two running instances at the *same* host
-folder, to exercise P5 against shared storage rather than storage private to
-one container. `create-instance.sh` hard-codes each instance's mount to its
-own `instances/<name>` folder, so this isn't available through the script as
-written — it would need either a manual `container run` invocation with an
-extra `--volume <shared-host-path>:<container-path>` added, or a small
-script change to accept an optional shared-mount argument. Not yet
-implemented; do the per-instance local-folder setup first and come back to
-shared storage as its own test once Archive configuration is working on at
-least one instance.
+Several instances can read the same host folder of source media. Create
+each with `create-instance-with-media.sh`, or a whole batch with
+`P5_LAB_MEDIA=<folder> ./scripts/create-instances.sh <count>`; see
+[Creating an instance with read-only source media](#creating-an-instance-with-read-only-source-media).
+The mount is read-only in every instance, so the instances cannot interfere
+with each other through it.
+
+One instance has archived from the shared mount. Two instances archiving
+from it at the same time, and a restore verified against the originals, are
+not yet tested.
+
+### Shared writable storage across instances (to test)
+
+Pointing two running instances at the same *writable* host folder, for
+example a shared Disk Pool target, is a separate test and is not available
+through the scripts. It would need a manual `container run` with an extra
+`--volume <shared-host-path>:<container-path>`. Not yet implemented or run.
 
 Research on which parts of Archive configuration (index/pool/plan creation
 vs. submitting and monitoring jobs against ones that already exist) can be
