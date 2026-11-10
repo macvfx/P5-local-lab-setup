@@ -139,7 +139,7 @@ If the unpacked folder has a version suffix, change into that directory before
 running the scripts, for example:
 
 ```sh
-cd P5-Local-Lab-0.1.6
+cd P5-Local-Lab-0.1.7
 ```
 
 ### 4. Check the host and build the P5 image
@@ -649,6 +649,21 @@ once the new pin is downloaded, verified, and built.
 
 ## Backlog
 
+- **Stronger read-only media checks.** Three follow-ups to
+  `create-instance-with-media.sh`, deferred because each needs runs on
+  Apple's runtime to get right:
+  1. Confirm `/media` is a real mount with the read-only option, from the
+     `mounts` entry in `container inspect`, instead of only testing that the
+     folder exists. A Linux image normally has an empty `/media` already, so
+     a mount that silently failed is reported as "writable" today: safe, but
+     the wrong message.
+  2. Have `start-instance.sh` check that an instance's media source folder
+     is present before starting, and say so clearly. Starting an instance
+     whose external media drive is not attached is untested and will
+     probably fail with a runtime error.
+  3. Have `smoke-test.sh` and `status.sh` check `/media` for instances
+     created with the `com.matx.p5-local-lab.media-target` label.
+  Not started.
 - **Regular Linux installer instead of the Docker-specific package.**
   Archiware's standard RPM/DEB-style Linux installer may be retained more
   reliably than the Docker-specific export (worth checking when picked up).
