@@ -345,8 +345,20 @@ discards its P5 configuration and any activated trial licence. To keep such
 an instance, clone the media into its own `source/` folder instead
 (`cp -Rc` uses no extra space on the same APFS volume).
 
-Status: checked against a stub runtime only. Not yet run on Apple's
-`container` runtime, and not part of any acceptance record.
+To give a whole batch the same media folder, set `P5_LAB_MEDIA` when
+calling `create-instances.sh`:
+
+```sh
+P5_LAB_MEDIA=/Volumes/Media/TestFootage ./scripts/create-instances.sh 3
+```
+
+Without `P5_LAB_MEDIA` the batch script behaves exactly as before.
+
+Status: the single-instance script passed an operator-reported run on
+Apple's `container` runtime on 2026-11-09; see
+[`Docs/MEDIA_MOUNT_ACCEPTANCE_2026-11-09.md`](Docs/MEDIA_MOUNT_ACCEPTANCE_2026-11-09.md).
+The `P5_LAB_MEDIA` batch option has been checked against a stub runtime
+only.
 
 Reset an instance to a fresh P5 server:
 

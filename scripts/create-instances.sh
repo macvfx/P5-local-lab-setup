@@ -30,6 +30,16 @@ case "$NAME_PREFIX" in
         ;;
 esac
 
+# Optional: set P5_LAB_MEDIA to a host folder of source media and every
+# instance created by this call gets it mounted read-only, through
+# scripts/create-instance-with-media.sh. Checked once here so a bad path
+# stops the batch before the first instance is created.
+MEDIA_ROOT=${P5_LAB_MEDIA:-}
+if [ -n "$MEDIA_ROOT" ] && [ ! -d "$MEDIA_ROOT" ]; then
+    echo "P5_LAB_MEDIA does not exist or is not a directory: $MEDIA_ROOT" >&2
+    exit 2
+fi
+
 REST_BASE=20000
 CLI_BASE=29001
 
@@ -67,7 +77,11 @@ while [ "$CREATED" -lt "$COUNT" ]; do
     CLI_PORT=$((CLI_BASE + NEXT - 1))
 
     echo "Creating instance $((CREATED + 1)) of $COUNT: $INSTANCE_NAME (REST $REST_PORT, CLI $CLI_PORT)"
-    "$P5_LAB_ROOT/scripts/create-instance.sh" "$INSTANCE_NAME" "$REST_PORT" "$CLI_PORT" "$VERSION_ARG"
+    if [ -n "$MEDIA_ROOT" ]; then
+        "$P5_LAB_ROOT/scripts/create-instance-with-media.sh" "$MEDIA_ROOT" "$INSTANCE_NAME" "$REST_PORT" "$CLI_PORT" "$VERSION_ARG"
+    else
+        "$P5_LAB_ROOT/scripts/create-instance.sh" "$INSTANCE_NAME" "$REST_PORT" "$CLI_PORT" "$VERSION_ARG"
+    fi
     SMOKE_TEST_COMMANDS="$SMOKE_TEST_COMMANDS
   ./scripts/smoke-test.sh $INSTANCE_NAME $REST_PORT $CLI_PORT"
 
