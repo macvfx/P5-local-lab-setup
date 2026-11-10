@@ -36,8 +36,8 @@ dated records that include exact versions.
 
 ## Not accepted by this pass
 
-- `P5_LAB_MEDIA` with `scripts/create-instances.sh` (batch creation); stub
-  runtime only.
+- Smoke tests and Archive jobs on the batch-created instances (see the
+  addendum below); only their creation was reported.
 - Two or more instances reading the same media folder at the same time.
 - Restore of the archived media and verification against the originals.
 - Media on network or removable volumes, where not already covered by the
@@ -45,3 +45,23 @@ dated records that include exact versions.
 - Stop/start and behaviour when the media volume is unavailable at start.
 - ContainerManager stack template and Docker Compose equivalents.
 - Throughput or large-file performance through the read-only mount.
+
+## Addendum: batch creation and port checks (2026-11-09)
+
+Also operator-reported, on the same host, later the same day.
+
+- FAIL (before the fix) - `P5_LAB_MEDIA=<folder> ./scripts/create-instances.sh 2`
+  with `p5-lab-01` to `p5-lab-04` present chose `p5-lab-05` on REST `20004`
+  and CLI `29005`. A running instance outside the numbering,
+  `p5-lab-04-media`, already held those ports. `container run` failed with
+  `Address already in use (errno: 48)`. No container was left behind, but
+  the empty `instances/p5-lab-05` folders were.
+- Fix - the create scripts now check both host ports before preparing the
+  instance folder, and the batch script skips a number whose port is busy.
+- PASS (after the fix) - the same command completed and created the
+  requested instances on the next free ports, each with the media folder
+  mounted read-only. The script's built-in visibility and write-probe checks
+  run for every instance and stop the batch on failure.
+
+Not recorded: the names and ports of the instances created, and whether
+`scripts/smoke-test.sh` was run against them.

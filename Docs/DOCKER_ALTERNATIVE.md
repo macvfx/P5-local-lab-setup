@@ -148,6 +148,27 @@ export P5_DOCKER_DATA="$PWD/instances/p5-docker-01"
 Use REST and CLI ports that differ from any Apple-runtime instance already
 using `20000` and `29001`.
 
+Check that both ports are free before starting; Compose fails with an
+address-in-use error otherwise. The Apple-container create scripts make this
+check themselves, but the Compose path does not:
+
+```sh
+nc -z -w 1 127.0.0.1 "$P5_DOCKER_PORT" && echo "REST port is in use"
+nc -z -w 1 127.0.0.1 "$P5_DOCKER_CLI_PORT" && echo "CLI port is in use"
+```
+
+### Optional: read-only source media
+
+`scripts/create-instance-with-media.sh` and the `P5_LAB_MEDIA` batch option
+are for the Apple-container path only. The Docker equivalent is one more
+line under `volumes:` in a copy of `docker/compose.yaml`:
+
+```yaml
+      - "/path/to/media:/media:ro"
+```
+
+This Docker form is untested by this project.
+
 ### 5. Start P5 with Compose
 
 Review [`docker/compose.yaml`](../docker/compose.yaml), then run:
