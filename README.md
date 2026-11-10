@@ -313,6 +313,41 @@ Each instance is still created one at a time through `create-instance.sh`,
 so the same name-collision guard and per-instance folder setup apply; this
 script only automates picking names and ports.
 
+### Creating an instance with read-only source media
+
+```sh
+./scripts/create-instance-with-media.sh <media-folder> [instance-name] [rest-port] [cli-port] [version]
+```
+
+Creates one instance the same way `create-instance.sh` does, and adds a
+second bind mount: an existing folder of source media on the Mac, mounted
+**read-only** inside the container at `/media`. For example:
+
+```sh
+./scripts/create-instance-with-media.sh /Volumes/Media/TestFootage p5-lab-03 20002 29003
+./scripts/smoke-test.sh p5-lab-03 20002 29003
+```
+
+The same media folder can be given to any number of instances, so one copy
+of the footage serves the whole lab. Each instance keeps its own writable
+`instances/<name>` folder at `/host_dir` for `archive/`, `restore/`, and
+`exports/`. Because the mount is read-only, no P5 job can modify or delete
+the originals.
+
+After creating the container the script confirms that `/media` is visible
+and that a write to it fails; it stops with an error if the mount turned out
+to be writable. Set `P5_LAB_MEDIA_TARGET` to use a container path other than
+`/media`.
+
+A mount cannot be added to a container that already exists. Giving an
+existing instance this mount means destroying and recreating it, which
+discards its P5 configuration and any activated trial licence. To keep such
+an instance, clone the media into its own `source/` folder instead
+(`cp -Rc` uses no extra space on the same APFS volume).
+
+Status: checked against a stub runtime only. Not yet run on Apple's
+`container` runtime, and not part of any acceptance record.
+
 Reset an instance to a fresh P5 server:
 
 ```sh
