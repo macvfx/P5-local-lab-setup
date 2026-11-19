@@ -462,6 +462,51 @@ The destroy command refuses containers that are not labelled as P5 Local Lab
 resources. It removes the container and its P5 configuration but deliberately
 keeps the instance's bind-mounted source, archive, restore, and export folders.
 
+### Cleaning up several instances
+
+Run the destroy script with no arguments to see every instance and choose
+what to delete:
+
+```sh
+./scripts/destroy-instance.sh
+```
+
+```text
+   #    INSTANCE                 CONTAINER  FOLDER
+   1)   p5-lab-01                stopped    143 MB
+   2)   p5-lab-02                stopped    44 MB
+   3)   p5-lab-03                none       68 MB
+
+  a    Delete all 3 instances (255 MB of folders)
+  1 3  Delete these (numbers, or a range such as 2-4)
+  q    Exit
+Choose:
+```
+
+- `a` deletes every listed instance. You must type `delete all` to confirm.
+- Numbers (`1 3`, `1,3`, or a range like `2-4`) delete just those. You must
+  type `yes` to confirm.
+- `q`, or an empty answer, exits and deletes nothing.
+
+After you confirm, it asks separately whether to delete the instances'
+folders as well. The default is no: without it only the containers go and
+`instances/<name>/` is kept, as with the single-name form. Running
+containers are stopped first. Containers that are not labelled as P5 Local
+Lab resources are never touched, and a read-only `/media` folder is on the
+host and is never deleted. The menu needs a terminal.
+
+The same actions without the menu, for scripts:
+
+```sh
+./scripts/destroy-instance.sh --all --confirm
+./scripts/destroy-instance.sh --all --confirm --delete-folders
+./scripts/destroy-instance.sh p5-lab-02 --confirm --delete-folders
+```
+
+`./scripts/test-destroy-instance.sh` tests all of this against a fake
+`container` command in a temporary copy of the project. It needs no container
+runtime and touches nothing real.
+
 ## Script reference
 
 All scripts live in `scripts/` and are run from the project directory.
@@ -478,7 +523,8 @@ All scripts live in `scripts/` and are run from the project directory.
 | `smoke-test.sh [name] [rest-port] [cli-port]` | Checks architecture, the `/host_dir` mount, the P5 CLI, the login page, and the CLI port. |
 | `status.sh [name]` | Shows container details, P5 version, filesystems, and resource use. |
 | `stop-instance.sh` / `start-instance.sh [name]` | Stops or starts an instance, keeping its P5 configuration. |
-| `destroy-instance.sh <name> --confirm` | Deletes a lab container and its P5 configuration; keeps the instance folder. |
+| `destroy-instance.sh` | With no arguments, lists the instances and lets you delete all, delete some, or exit. `<name> --confirm` or `--all --confirm` delete without the menu; `--delete-folders` also removes the instance folders, which are otherwise kept. |
+| `test-destroy-instance.sh` | Tests `destroy-instance.sh` against a fake `container` command. Needs no runtime. |
 | `prepare-instance-folder.sh [name]` | Creates the `instances/<name>` folder layout without creating a container. |
 | `list-p5-versions.sh` / `add-p5-version.sh` | Lists pinned P5 versions, or pins a new one. |
 | `package-project.sh` | Builds a distributable ZIP of the project without vendor software. |
